@@ -1,0 +1,49 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // USERS COLLECTION (Private metadata like what groups they are in)
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // GROUPS COLLECTION (Core isolation boundaries)
+    match /groups/{groupId} {
+      
+      // Anyone logged in can create a group or read basic group info to verify an invite code
+      allow read, create: if request.auth != null;
+      
+      // Only the group admin (creator) can rename, regenerate code, or delete the group
+      allow update, delete: if request.auth != null && resource.data.adminUid == request.auth.uid;
+      
+      // SUBCOLLECTION: Members
+      match /members/{memberUid} {
+        // You can read the member list ONLY if you are currently a member of this specific group
+        allow read: if request.auth != null && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+        
+        // You can join the group by writing your own UID document
+        allow create: if request.auth != null && request.auth.uid == memberUid;
+        
+        // Members can leave, OR the Admin can kick them out
+        allow update, delete: if request.auth != null && (
+          request.auth.uid == memberUid || 
+          get(/databases/$(database)/documents/groups/$(groupId)).data.adminUid == request.auth.uid
+        );
+      }
+      
+      // SUBCOLLECTION: Schedules
+      match /schedules/{scheduleUid} {
+        // You can only read schedules of people inside a group you are actively a member of!
+        // This is the absolute core of the data privacy boundary.
+        allow read: if request.auth != null && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+        
+        // You can only write your own schedule, AND you must be a member of the group
+        allow write: if request.auth != null && 
+                     request.auth.uid == scheduleUid && 
+                     exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+      }
+      
+    }
+  }
+}

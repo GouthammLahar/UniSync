@@ -886,14 +886,37 @@ input[type="text"][style*="monospace"] {
    RESPONSIVE
 ============================================ */
 @media (max-width: 768px) {
-  .app-container { padding: var(--space-5) var(--space-4); }
-  .app-nav { padding: 0 var(--space-4); }
-  .nav-links { gap: 1px; }
-  .nav-btn { padding: 0 8px; font-size: 0.78rem; }
-  .logo { font-size: 0.95rem; }
-  .filter-bar { flex-direction: column; }
-  .filter-bar .primary-btn { width: 100%; }
-  .live-header { flex-direction: column; }
+  .app-container { padding: var(--space-4) var(--space-3); }
+  .app-nav { padding: 0 var(--space-3); height: auto; min-height: 60px; flex-direction: column; align-items: stretch; justify-content: flex-start; }
+  .logo { padding: var(--space-3) 0; border-bottom: 1px solid var(--border); width: 100%; justify-content: space-between; font-size: 1.05rem; }
+  .nav-links { padding: var(--space-2) 0; width: 100%; justify-content: flex-start; overflow-x: auto; padding-bottom: 4px; border-top: none; }
+  .nav-btn { padding: 8px 12px; font-size: 0.85rem; height: auto; white-space: nowrap; }
+  
+  .card { padding: var(--space-5); margin-bottom: var(--space-4); border-radius: var(--r-lg); }
+  .login-card { padding: var(--space-6) var(--space-4); margin-top: 2rem; max-width: 100%; }
+  
+  .page-header { margin-bottom: var(--space-5); }
+  .page-header h1 { font-size: 1.4rem; }
+  
+  .filter-bar { flex-direction: column; align-items: stretch; }
+  .filter-bar .form-group { width: 100%; }
+  .filter-bar .primary-btn { width: 100%; align-self: stretch; }
+  
+  .search-bar { flex-direction: column; }
+  .search-bar .primary-btn { width: 100%; }
+  
+  .live-header { flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+  
+  .groups-grid { grid-template-columns: 1fr; }
+  
+  .file-drop-area { padding: 2rem 1rem; }
+  .drop-icon { font-size: 2rem; }
+  .drop-text { font-size: 0.85rem; }
+  
+  .section-divider h3 { font-size: 0.75rem; }
+  .preview-table th, .preview-table td { padding: 8px 10px; font-size: 0.8rem; }
+  .preview-actions { flex-direction: column; }
+  .preview-actions button { width: 100%; }
 }
 
 /* ============================================
@@ -1146,3 +1169,165 @@ input[type="text"][style*="monospace"] {
   border-radius: 0;
 }
 
+/* ============================================
+   UPLOAD TAB SWITCHER
+============================================ */
+.upload-tabs {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  padding: 4px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+
+.upload-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--r-md);
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.upload-tab:hover {
+  color: var(--text);
+  background: rgba(79, 70, 229, 0.05);
+}
+.upload-tab.active {
+  background: var(--bg-card);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+.upload-tab span { font-size: 1rem; }
+
+/* ============================================
+   AI DROP ZONE (PNG/JPG)
+============================================ */
+.ai-drop-zone {
+  border-color: rgba(79, 70, 229, 0.3);
+  background: linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 100%);
+}
+.ai-drop-zone:hover {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, #E0E7FF 0%, #EDE9FE 100%);
+}
+.ai-drop-zone.drag-over {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, #C7D2FE 0%, #DDD6FE 100%);
+  transform: scale(1.01);
+}
+
+/* ============================================
+   IMAGE PREVIEW BOX
+============================================ */
+.image-preview-box {
+  position: relative;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  border: 1.5px solid var(--border);
+  background: var(--bg-subtle);
+  max-height: 320px;
+}
+.image-preview-box img {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  background: #fff;
+}
+.image-preview-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: linear-gradient(0deg, rgba(15,23,42,0.65) 0%, transparent 100%);
+  gap: var(--space-2);
+}
+.image-filename {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+}
+.image-preview-overlay .secondary-btn {
+  width: auto;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 0.75rem;
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.3);
+  color: #fff;
+  backdrop-filter: blur(4px);
+  flex-shrink: 0;
+}
+.image-preview-overlay .secondary-btn:hover {
+  background: rgba(255,255,255,0.28);
+  transform: none;
+}
+
+/* ============================================
+   SCAN WITH AI BUTTON
+============================================ */
+.scan-btn {
+  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #A855F7 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+  font-size: 0.95rem;
+  height: 50px;
+}
+.scan-btn:hover {
+  box-shadow: 0 6px 28px rgba(124, 58, 237, 0.55);
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+.scan-btn:disabled {
+  animation: none;
+  background: var(--border) !important;
+  color: var(--text-muted) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.scan-btn-icon {
+  display: inline-block;
+  animation: sparkle 1.4s ease-in-out infinite;
+}
+@keyframes gradientShift {
+  0%   { background-position: 0%   50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0%   50%; }
+}
+@keyframes sparkle {
+  0%, 100% { transform: scale(1)   rotate(0deg); }
+  25%       { transform: scale(1.2) rotate(-10deg); }
+  75%       { transform: scale(1.2) rotate(10deg); }
+}
+
+/* Scanning pulse on image preview border */
+.image-preview-box.scanning {
+  animation: scanPulse 1.2s ease-in-out infinite;
+}
+@keyframes scanPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);    border-color: var(--accent); }
+  50%       { box-shadow: 0 0 0 6px rgba(79, 70, 229, 0.18); border-color: var(--accent-2); }
+}

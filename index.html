@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ClassSquad — Smart Timetable Sharing</title>
+    <title>UniSync — Smart Timetable Sharing</title>
     <meta name="description" content="Share and compare timetables with your squad. Find free time together instantly." />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,11 +15,8 @@
     <!-- ── NAVIGATION ──────────────────────────────── -->
     <nav class="app-nav hidden" id="main-nav">
       <div class="logo">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="flex-shrink:0">
-          <rect width="24" height="24" rx="6" fill="#4F46E5"/>
-          <path d="M7 8h10M7 12h7M7 16h5" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        ClassSquad
+        <img src="./logo.png" alt="UniSync Logo" width="32" height="32" style="border-radius: 6px; flex-shrink: 0;" />
+        UniSync
         <select id="group-switcher-select" title="Switch Group"></select>
       </div>
 
@@ -40,11 +37,8 @@
       <!-- ── 0. LOGIN ───────────────────────────────── -->
       <section id="login-view" class="view active">
         <div class="card login-card">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style="margin: 0 auto var(--space-5)">
-            <rect width="24" height="24" rx="8" fill="#4F46E5"/>
-            <path d="M7 8h10M7 12h7M7 16h5" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <h1>Welcome to ClassSquad</h1>
+          <img src="./logo.png" alt="UniSync Logo" width="72" height="72" style="margin: 0 auto var(--space-5); border-radius: 12px; display: block; box-shadow: var(--shadow-sm);" />
+          <h1>Welcome to UniSync</h1>
           <p>Your squad's private timetable hub. Sign in to upload your schedule, find free time together, and see who's in class right now.</p>
           <button id="google-login-btn" class="google-btn">
             <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
@@ -63,7 +57,7 @@
         <div class="card">
           <p id="my-timetable-status" class="upload-status-tag empty">Not uploaded yet</p>
 
-          <!-- Upload Form: Excel only -->
+          <!-- Upload Form: Excel + AI Scan tabs -->
           <div id="upload-form" class="hidden">
 
             <!-- Notice for returning users -->
@@ -71,20 +65,56 @@
               ⚠️ If you uploaded before April 2026, please re-upload your timetable — the format has been updated to use exact LPU time slots.
             </div>
 
-            <!-- Drop Zone -->
-            <div class="file-drop-area" id="file-drop-area">
-              <span class="drop-icon">📊</span>
-              <span class="drop-text">Drag &amp; drop your LPU timetable (.xlsx)<br><small style="color:var(--text-muted);">or click to browse</small></span>
-              <input type="file" id="timetable-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+            <!-- ── Tab Switcher ── -->
+            <div class="upload-tabs" id="upload-tabs">
+              <button class="upload-tab active" id="tab-excel" data-tab="excel">
+                <span>📊</span> Upload Excel
+              </button>
+              <button class="upload-tab" id="tab-ai" data-tab="ai">
+                <span>✨</span> Scan with AI
+              </button>
             </div>
 
-            <!-- Parse Status -->
+            <!-- ── EXCEL TAB ── -->
+            <div id="tab-panel-excel" class="tab-panel">
+              <div class="file-drop-area" id="file-drop-area">
+                <span class="drop-icon">📊</span>
+                <span class="drop-text">Drag &amp; drop your LPU timetable (.xlsx)<br><small style="color:var(--text-muted);">or click to browse</small></span>
+                <input type="file" id="timetable-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+              </div>
+            </div>
+
+            <!-- ── AI SCAN TAB ── -->
+            <div id="tab-panel-ai" class="tab-panel hidden">
+              <!-- Image Drop Zone -->
+              <div class="file-drop-area ai-drop-zone" id="image-drop-area">
+                <span class="drop-icon">🖼️</span>
+                <span class="drop-text">Drag &amp; drop your timetable screenshot (.png / .jpg)<br><small style="color:var(--text-muted);">or click to browse</small></span>
+                <input type="file" id="timetable-image" accept="image/png,image/jpeg,image/webp" />
+              </div>
+
+              <!-- Image Preview (shows after file selected) -->
+              <div id="image-preview-wrap" class="hidden" style="margin-top:var(--space-4);">
+                <div class="image-preview-box">
+                  <img id="image-preview-thumb" src="" alt="Timetable preview" />
+                  <div class="image-preview-overlay">
+                    <span id="image-preview-filename" class="image-filename"></span>
+                    <button id="change-image-btn" class="secondary-btn btn-sm">Change Image</button>
+                  </div>
+                </div>
+                <button id="scan-image-btn" class="primary-btn scan-btn" style="margin-top:var(--space-4); width:100%;">
+                  <span class="scan-btn-icon">✨</span> Scan with Gemini AI
+                </button>
+              </div>
+            </div>
+
+            <!-- ── Shared: Parsing Status ── -->
             <div id="upload-status" class="status-message hidden" style="margin-top:var(--space-4);">
               <div class="spinner"></div>
               <span id="status-text">Parsing file...</span>
             </div>
 
-            <!-- Preview Panel (shown after parsing) -->
+            <!-- ── Shared: Preview Panel (shown after parsing) ── -->
             <div id="preview-panel" class="hidden" style="margin-top:var(--space-5);">
               <div class="preview-header">
                 <div>

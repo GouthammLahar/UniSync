@@ -6,4 +6,4 @@ export const firebaseConfig = {
   messagingSenderId: "30564166876",
   appId: "1:30564166876:web:a60fe4503b52891e279819"
 };
-export const geminiApiKey = "AIzaSyC1iB32R589NLlhNP7AG7AmyAFrZ9_28IY";
+export const geminiApiKey = "AIzaSyBG74H-vHSI2hOEVeSoNBsbkdqisMGfVIc";

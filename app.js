@@ -1,7 +1,7 @@
 import { 
   auth, loginWithGoogle, logoutUser, onAuthChange,
   createGroup, joinGroup, leaveGroup, getUserGroups,
-  regenerateGroupCode, deleteGroup,
+  regenerateGroupCode, deleteGroup, kickMember,
   getGroupProfile, updateGroupProfile, saveGroupSchedule, deleteGroupSchedule,
   getFriendSchedule, getAllGroupStudents, searchGroupFriends, getGroupSquadStatus, getGroupMemberCount
 } from './db.js';
@@ -47,11 +47,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if(googleLoginBtn) {
     googleLoginBtn.addEventListener('click', async () => {
+      // Disable button to prevent multiple popup requests
+      googleLoginBtn.disabled = true;
+      googleLoginBtn.textContent = 'Signing in...';
       try { 
         await loginWithGoogle(); 
-      } catch (e) { 
-        console.error("Login failed:", e);
-        alert("Login failed: " + e.message); 
+      } catch (e) {
+        // Re-enable button on failure
+        googleLoginBtn.disabled = false;
+        googleLoginBtn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px;vertical-align:middle;margin-right:8px"> Sign in with Google';
+        if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+          console.error("Login failed:", e);
+          alert("Login failed: " + e.message);
+        }
       }
     });
   }
@@ -68,7 +76,12 @@ document.addEventListener('DOMContentLoaded', () => {
   ========================================================= */
   onAuthChange(async (user) => {
     if (user) {
-      await reloadAllUserGroups();
+      try {
+        await reloadAllUserGroups();
+      } catch(e) {
+        console.error("Error loading app after login:", e);
+        alert("Error loading app: " + e.message + "\n\nCode: " + e.code);
+      }
     } else {
       mainNav.classList.add('hidden');
       switchView('login-view');
@@ -82,7 +95,13 @@ document.addEventListener('DOMContentLoaded', () => {
     mainNav.classList.add('hidden');
     if (!auth.currentUser) return;
     
-    allMyGroups = await getUserGroups();
+    try {
+      allMyGroups = await getUserGroups();
+    } catch(e) {
+      console.error("getUserGroups failed:", e);
+      alert("Failed to load groups: " + e.message + "\n\nCode: " + e.code);
+      return;
+    }
     
     if (allMyGroups.length === 0) {
        switchView('groups-view');
@@ -559,10 +578,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
          <div class="group-card-actions">
            ${isAdmin
-             ? `<button class="primary-btn btn-sm dashboard-delete-btn" data-id="${group.id}" style="background:var(--red); box-shadow:0 2px 8px rgba(239,68,68,0.25);">Delete Group</button>`
+             ? `
+               <button class="secondary-btn btn-sm manage-members-btn" data-id="${group.id}">👥 Manage Members</button>
+               <button class="secondary-btn btn-sm dashboard-leave-btn" data-id="${group.id}" style="color:var(--red); border-color:var(--red);">Leave Group</button>
+               <button class="primary-btn btn-sm dashboard-delete-btn" data-id="${group.id}" style="background:var(--red); box-shadow:0 2px 8px rgba(239,68,68,0.25);">Delete Group</button>
+             `
              : `<button class="secondary-btn btn-sm dashboard-leave-btn" data-id="${group.id}" style="color:var(--red); border-color:var(--red);">Leave Group</button>`
            }
          </div>
+         ${isAdmin ? `<div class="members-panel hidden" id="members-panel-${group.id}"></div>` : ''}
        `;
        grid.appendChild(card);
      }
@@ -586,6 +610,66 @@ document.addEventListener('DOMContentLoaded', () => {
            await leaveGroup(e.target.getAttribute('data-id'));
            if (activeGroupId === e.target.getAttribute('data-id')) activeGroupId = null;
            await reloadAllUserGroups();
+         }
+       });
+     });
+
+     document.querySelectorAll('.manage-members-btn').forEach(b => {
+       b.addEventListener('click', async (e) => {
+         const groupId = e.target.getAttribute('data-id');
+         const panel = document.getElementById(`members-panel-${groupId}`);
+         if (!panel.classList.contains('hidden')) {
+           panel.classList.add('hidden');
+           e.target.textContent = '👥 Manage Members';
+           return;
+         }
+         e.target.textContent = 'Loading...';
+         e.target.disabled = true;
+         try {
+           const members = await getAllGroupStudents(groupId);
+           panel.innerHTML = `
+             <div class="members-panel-header">Group Members (${members.length})</div>
+             ${members.map(m => `
+               <div class="member-row" id="member-row-${m.id}">
+                 <div class="member-row-info">
+                   <span class="member-row-avatar">${m.name.substring(0,1).toUpperCase()}</span>
+                   <span class="member-row-name">${m.name}</span>
+                   ${m.id === auth.currentUser.uid ? '<span class="role-badge admin" style="font-size:0.65rem;padding:2px 6px;">You</span>' : ''}
+                 </div>
+                 ${m.id !== auth.currentUser.uid ? `
+                   <button class="secondary-btn btn-sm kick-member-btn" 
+                     data-group="${groupId}" data-uid="${m.id}" data-name="${m.name}"
+                     style="color:var(--red);border-color:var(--red);font-size:0.75rem;padding:4px 10px;">
+                     Remove
+                   </button>` : ''}
+               </div>
+             `).join('')}
+           `;
+           panel.classList.remove('hidden');
+           e.target.textContent = '✕ Close Members';
+           e.target.disabled = false;
+
+           panel.querySelectorAll('.kick-member-btn').forEach(kb => {
+             kb.addEventListener('click', async () => {
+               const uid = kb.getAttribute('data-uid');
+               const name = kb.getAttribute('data-name');
+               const gid = kb.getAttribute('data-group');
+               if (confirm(`Remove "${name}" from this group? They will lose all access.`)) {
+                 kb.textContent = 'Removing...';
+                 kb.disabled = true;
+                 await kickMember(gid, uid);
+                 document.getElementById(`member-row-${uid}`)?.remove();
+                 // Update member count display
+                 const newCount = panel.querySelectorAll('.member-row').length;
+                 panel.querySelector('.members-panel-header').textContent = `Group Members (${newCount})`;
+               }
+             });
+           });
+         } catch(err) {
+           panel.innerHTML = `<p style="color:red;padding:0.5rem;">Failed to load members: ${err.message}</p>`;
+           panel.classList.remove('hidden');
+           e.target.disabled = false;
+           e.target.textContent = '👥 Manage Members';
          }
        });
      });

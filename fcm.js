@@ -9,7 +9,7 @@ import { saveFCMToken, deleteFCMToken } from './meetings-db.js?v=9';
 
 // VAPID key — set via Vercel env var injected at build time, or fallback
 // Replace YOUR_VAPID_KEY_HERE with the actual key from Firebase Console → Project Settings → Cloud Messaging
-const VAPID_KEY = window.__FCM_VAPID_KEY__ || 'YOUR_VAPID_KEY_HERE';
+const VAPID_KEY = window.__FCM_VAPID_KEY__ || 'BPOJdGHkf4v_GLWRLMRH4zrocNmgH0Y7XwZAHjM-xa1iQy3DEylBsZhvG6Chhl4zYkarlIYVnUzDqFltN7D-ggY';
 
 let _messaging = null;
 

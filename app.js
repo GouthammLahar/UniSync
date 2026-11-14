@@ -4,9 +4,9 @@ import {
   regenerateGroupCode, deleteGroup, kickMember,
   getGroupProfile, updateGroupProfile, saveGroupSchedule, deleteGroupSchedule,
   getFriendSchedule, getAllGroupStudents, searchGroupFriends, getGroupSquadStatus, getGroupMemberCount
-} from './db.js?v=8';
-import { parseLpuExcel } from './timetable-parser.js?v=8';
-import { scanTimetableImage } from './api.js?v=8';
+} from './db.js?v=9';
+import { parseLpuExcel } from './timetable-parser.js?v=9';
+import { scanTimetableImage } from './api.js?v=9';
 import {
   normaliseTime,
   timeToMinutes,
@@ -16,7 +16,9 @@ import {
   findCommonFreeSlots,
   checkStudentBusy,
   DAY_ORDER
-} from './schedule-utils.js?v=8';
+} from './schedule-utils.js?v=9';
+import { initMeetingsModule, enterMeetingsView, cleanupMeetingsModule } from './meetings.js?v=9';
+import { initNotificationBell, cleanupNotificationBell } from './notifications.js?v=9';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -95,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (targetId === 'dashboard-view')  renderDashboard();
     if (targetId === 'groups-view')     renderGroupsDashboard();
     if (targetId === 'right-now-view')  renderLiveTracker();
+    if (targetId === 'meetings-view')   enterMeetingsView();
   }
   window.switchView = switchView;
 
@@ -181,6 +184,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (mobileAppBar) mobileAppBar.classList.remove('hidden');
       if (userMenuWrap) userMenuWrap.classList.remove('hidden');
 
+      // Show notification bell
+      const notifBellWrap = document.getElementById('notif-bell-wrap');
+      if (notifBellWrap) notifBellWrap.classList.remove('hidden');
+
       if (auth.currentUser) {
         const u = auth.currentUser;
         if (userDropdownEmail) userDropdownEmail.innerText = u.email || '';
@@ -188,6 +195,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (navUserAvatar) navUserAvatar.innerText = initial;
         if (navUserName) navUserName.innerText = (u.displayName ? u.displayName.split(' ')[0] : 'Student');
         if (userDropdownName) userDropdownName.innerText = u.displayName || 'Student';
+
+        // Init notification bell
+        initNotificationBell(u.uid, switchView);
+
+        // Init meetings module with injected dependencies
+        initMeetingsModule({
+          getAllGroupStudents: (gid) => getAllGroupStudents(gid),
+          getActiveGroupId:   () => activeGroupId,
+          getActiveGroupMeta: () => activeGroupMeta,
+          showToast:          (msg, type) => showToast(msg, type)
+        });
       }
 
       try {
@@ -203,6 +221,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (userMenuWrap) userMenuWrap.classList.add('hidden');
       if (squadPillWrapper) squadPillWrapper.classList.add('hidden');
       groupSwitcher.classList.add('hidden');
+
+      // Hide notification bell and cleanup
+      const notifBellWrap = document.getElementById('notif-bell-wrap');
+      if (notifBellWrap) notifBellWrap.classList.add('hidden');
+      cleanupNotificationBell();
+      cleanupMeetingsModule();
+
       switchView('landing-view');
       activeGroupId = null;
       activeGroupMeta = null;

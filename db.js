@@ -1,11 +1,11 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDocs, getDoc, updateDoc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
-import { firebaseConfig } from './config.js?v=8';
-import { checkStudentBusy, timeToMinutes } from './schedule-utils.js?v=8';
+import { firebaseConfig } from './config.js?v=9';
+import { checkStudentBusy, timeToMinutes } from './schedule-utils.js?v=9';
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+export const db = getFirestore(app);
 export const auth = getAuth(app);
 
 /* =========================================================

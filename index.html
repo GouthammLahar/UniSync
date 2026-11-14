@@ -17,13 +17,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./style.css?v=8">
+    <link rel="stylesheet" href="./style.css?v=9">
     <script type="importmap">
     {
       "imports": {
         "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
         "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
         "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+        "firebase/messaging": "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js",
         "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs"
       }
     }
@@ -69,7 +70,23 @@
           <button class="nav-link" data-target="squad-view">Squad</button>
           <button class="nav-link" data-target="find-view">Find Friends</button>
           <button class="nav-link" data-target="groups-view">My Squads</button>
+          <button class="nav-link" data-target="meetings-view">📅 Meetings</button>
         </nav>
+
+        <!-- Notification Bell (Logged In) -->
+        <div class="notif-bell-wrap hidden" id="notif-bell-wrap">
+          <button class="notif-bell-btn" id="notif-bell-btn" title="Notifications">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            <span class="notif-badge hidden" id="notif-badge">0</span>
+          </button>
+          <div class="notif-dropdown hidden" id="notif-dropdown">
+            <div class="notif-dropdown-header">
+              <span>Notifications</span>
+              <button id="mark-all-read-btn" class="mark-all-read-btn">Mark all read</button>
+            </div>
+            <div id="notif-list" class="notif-list"></div>
+          </div>
+        </div>
 
         <!-- Nav Right: User Account Menu (Logged In) -->
         <div class="user-menu-wrap hidden" id="nav-user-menu-wrap">
@@ -1051,6 +1068,130 @@
 
 
     <!-- ====================================================
+         VIEW: MEETINGS — Smart Meeting Scheduler
+    ==================================================== -->
+    <section id="meetings-view" class="view">
+      <div class="view-container">
+        <div class="meetings-page-header">
+          <div>
+            <h1 class="view-heading">📅 Meetings</h1>
+            <p class="view-subheading">Schedule, track and coordinate meetings with your squad.</p>
+          </div>
+          <button class="btn-primary" id="schedule-meeting-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Schedule Meeting
+          </button>
+        </div>
+        <div class="meetings-tab-bar">
+          <button class="meeting-tab-btn active" data-tab="upcoming">Upcoming</button>
+          <button class="meeting-tab-btn" data-tab="invitations">Invitations <span class="meeting-invitations-badge hidden" id="meeting-invitations-badge">0</span></button>
+          <button class="meeting-tab-btn" data-tab="created">My Meetings</button>
+          <button class="meeting-tab-btn" data-tab="past">Past</button>
+        </div>
+        <div class="meetings-tab-content">
+          <div id="meetings-upcoming-panel" class="meetings-tab-panel active">
+            <div id="meetings-upcoming-list"></div>
+          </div>
+          <div id="meetings-invitations-panel" class="meetings-tab-panel">
+            <div id="meetings-invitations-list"></div>
+          </div>
+          <div id="meetings-created-panel" class="meetings-tab-panel">
+            <div id="meetings-created-list"></div>
+          </div>
+          <div id="meetings-past-panel" class="meetings-tab-panel">
+            <div id="meetings-past-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================
+         MODAL: MEETING CREATION (Multi-Step)
+    ==================================================== -->
+    <div id="meeting-creation-modal" class="modal-overlay hidden">
+      <div class="modal-box meeting-modal-box">
+        <div class="meeting-modal-header">
+          <h2 class="meeting-modal-title">📅 Schedule a Meeting</h2>
+          <button class="modal-close-btn" id="meeting-modal-close" title="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <!-- STEP 1: Details & Participants -->
+        <div class="meeting-modal-step active" id="meeting-step-1">
+          <div class="meeting-form-grid">
+            <div class="form-group">
+              <label class="form-label" for="meeting-title-input">Meeting Title *</label>
+              <input type="text" id="meeting-title-input" class="form-input" placeholder="e.g. Group Study Session" maxlength="80">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="meeting-desc-input">Purpose / Description</label>
+              <textarea id="meeting-desc-input" class="form-input" rows="2" placeholder="What's the meeting about?"></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="meeting-type-select">Meeting Type</label>
+                <select id="meeting-type-select" class="form-input">
+                  <option value="group">👥 Group Meeting</option>
+                  <option value="friend">🤝 Friend Meeting</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="meeting-duration-select">Duration</label>
+                <select id="meeting-duration-select" class="form-input">
+                  <option value="30">30 minutes</option>
+                  <option value="45">45 minutes</option>
+                  <option value="60" selected>1 hour</option>
+                  <option value="90">1.5 hours</option>
+                  <option value="120">2 hours</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Select Participants *</label>
+              <div id="meeting-participant-selector" class="participant-selector-box">
+                <p class="helper-text">Choose meeting type to load participants.</p>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="meeting-slots-day-select">Preferred Day</label>
+                <select id="meeting-slots-day-select" class="form-input">
+                  <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+                  <option>Thursday</option><option>Friday</option><option>Saturday</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="meeting-location-input">Location (optional)</label>
+                <input type="text" id="meeting-location-input" class="form-input" placeholder="Library, Lab, Online…">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="meeting-notes-input">Notes (optional)</label>
+              <input type="text" id="meeting-notes-input" class="form-input" placeholder="Bring your notes, meeting link…">
+            </div>
+          </div>
+          <div class="meeting-modal-footer">
+            <button class="btn-primary full-width" id="meeting-find-slots-btn">🔍 Find Available Slots</button>
+          </div>
+        </div>
+        <!-- STEP 2: Choose Slot -->
+        <div class="meeting-modal-step" id="meeting-step-2">
+          <div class="slots-step-header">
+            <h3 class="slots-step-title">Common Free Slots</h3>
+            <p class="slots-step-info" id="meeting-slots-info">Select a time slot below</p>
+          </div>
+          <div class="slots-scroll-area">
+            <div id="meeting-slots-list" class="meeting-slots-list"></div>
+          </div>
+          <div class="meeting-modal-footer form-row">
+            <button class="btn-secondary" id="meeting-back-btn">← Back</button>
+            <button class="btn-primary" id="meeting-confirm-btn" disabled>✅ Send Invitations</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================
          MODAL: UPDATE / REPLACE WARNING
     ==================================================== -->
     <div id="update-warning-modal" class="modal-overlay hidden">
@@ -1087,12 +1228,16 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
         <span>Squads</span>
       </button>
+      <button class="mobile-tab-btn" data-target="meetings-view" title="Meetings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><circle cx="12" cy="16" r="2"></circle></svg>
+        <span>Meetings</span>
+      </button>
     </nav>
 
     <!-- ── TOAST NOTIFICATIONS (Doherty Threshold & Instant Feedback) ── -->
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Application Module Entry Point -->
-    <script type="module" src="./app.js?v=8"></script>
+    <script type="module" src="./app.js?v=9"></script>
   </body>
 </html>

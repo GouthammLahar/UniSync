@@ -2,206 +2,768 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>UniSync — Smart Timetable Sharing</title>
-    <meta name="description" content="Share and compare timetables with your squad. Find free time together instantly." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="UniSync" />
+    <meta name="theme-color" content="#536B5B" />
+    <link rel="manifest" href="./manifest.json" />
+    <title>UniSync — Different schedules. Shared moments.</title>
+    <meta name="description" content="Discover when your university friends are free. Import timetables via AI or Excel, form private campus squads, and uncover shared moments effortlessly." />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css?v=8">
+    <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+        "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs"
+      }
+    }
+    </script>
   </head>
   <body>
 
-    <!-- ── NAVIGATION ──────────────────────────────── -->
-    <nav class="app-nav hidden" id="main-nav">
-      <div class="logo">
-        <img src="./logo.png" alt="UniSync Logo" width="32" height="32" style="border-radius: 6px; flex-shrink: 0;" />
-        UniSync
-        <select id="group-switcher-select" title="Switch Group"></select>
-      </div>
+    <!-- ── GLOBAL NAVIGATION ──────────────────────────── -->
+    <header class="site-nav" id="site-header">
+      <div class="nav-container">
+        
+        <!-- Nav Left: Brand & Squad Pill -->
+        <div class="nav-brand-group">
+          <a href="#" class="brand-block" id="nav-brand-link">
+            <img src="./logo.png" alt="UniSync Logo" class="brand-logo" width="34" height="34" />
+            <span class="brand-name">UniSync</span>
+          </a>
+          <!-- Squad Switcher Pill (Active when logged in with squads) -->
+          <div class="squad-selector-pill hidden" id="squad-pill-wrapper">
+            <span class="squad-pulse-indicator"></span>
+            <select id="group-switcher-select" class="group-pill-select" aria-label="Switch Campus Squad"></select>
+            <svg class="squad-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+        </div>
 
-      <div class="nav-links">
-        <button class="nav-btn active" data-target="upload-view">My Timetable</button>
-        <button class="nav-btn" data-target="groups-view">My Groups</button>
-        <button class="nav-btn" data-target="find-view">Find</button>
-        <button class="nav-btn" data-target="squad-view">Squad</button>
-        <button class="nav-btn" data-target="free-slots-view">Free Slots</button>
-        <button class="nav-btn" data-target="right-now-view">Right Now</button>
-        <button class="nav-btn" data-target="profile-view">Profile</button>
-        <button class="nav-btn" id="logout-btn">Logout</button>
-      </div>
-    </nav>
-
-    <main class="app-container">
-
-      <!-- ── 0. LOGIN ───────────────────────────────── -->
-      <section id="login-view" class="view active">
-        <div class="card login-card">
-          <img src="./logo.png" alt="UniSync Logo" width="72" height="72" style="margin: 0 auto var(--space-5); border-radius: 12px; display: block; box-shadow: var(--shadow-sm);" />
-          <h1>Welcome to UniSync</h1>
-          <p>Your squad's private timetable hub. Sign in to upload your schedule, find free time together, and see who's in class right now.</p>
-          <button id="google-login-btn" class="google-btn">
-            <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-            Sign in with Google
+        <!-- Public Nav Links (Logged Out) -->
+        <nav class="nav-links-wrap" id="public-nav-links">
+          <a href="#features" class="nav-link">Features</a>
+          <a href="#how-it-works" class="nav-link">How It Works</a>
+          <a href="#free-time-engine" class="nav-link">Free-Time Engine</a>
+          <a href="#faq" class="nav-link">FAQ</a>
+          <button id="nav-login-btn" class="nav-cta-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#fff"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#fff"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fff"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#fff"/></svg>
+            Sign In with Google
           </button>
+        </nav>
+
+        <!-- App Segmented Nav Rail (Logged In - Desktop) -->
+        <nav class="app-segmented-nav hidden" id="app-nav-links">
+          <button class="nav-link active" data-target="dashboard-view">Workspace</button>
+          <button class="nav-link" data-target="upload-view">My Timetable</button>
+          <button class="nav-link" data-target="free-slots-view">Free Slots</button>
+          <button class="nav-link" data-target="squad-view">Squad</button>
+          <button class="nav-link" data-target="find-view">Find Friends</button>
+          <button class="nav-link" data-target="groups-view">My Squads</button>
+        </nav>
+
+        <!-- Nav Right: User Account Menu (Logged In) -->
+        <div class="user-menu-wrap hidden" id="nav-user-menu-wrap">
+          <button class="user-menu-pill" id="user-menu-trigger" title="Account Menu">
+            <div class="user-avatar-circle" id="nav-user-avatar">U</div>
+            <span class="user-pill-name" id="nav-user-name">Student</span>
+            <svg class="chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+
+          <!-- Dropdown Flyout -->
+          <div class="user-dropdown-panel hidden" id="user-dropdown-panel">
+            <div class="user-dropdown-header">
+              <strong id="user-dropdown-name">Student</strong>
+              <span id="user-dropdown-email">user@university.edu</span>
+            </div>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item dropdown-nav-btn" data-target="profile-view">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              Profile &amp; Settings
+            </button>
+            <button class="dropdown-item dropdown-nav-btn" data-target="right-now-view">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              Right Now (Live Tracker)
+            </button>
+            <button class="dropdown-item dropdown-nav-btn" data-target="groups-view">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              Manage Squads
+            </button>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item dropdown-logout" id="logout-btn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+              Sign Out
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- ── MAIN CONTENT CONTAINER ────────────────────── -->
+    <main id="main-content">
+
+      <!-- ====================================================
+           VIEW 0: EDITORIAL PRODUCT LANDING PAGE (LOGGED OUT)
+      ==================================================== -->
+      <section id="landing-view" class="view active">
+        
+        <!-- Hero Section -->
+        <div class="landing-hero">
+          <div class="hero-eyebrow">Different schedules. Shared moments.</div>
+          <h1 class="hero-title">
+            Your schedules differ.<br>
+            <em>Your time together doesn't have to.</em>
+          </h1>
+          <p class="hero-subtitle">
+            UniSync connects university students across different batches, departments, and staggered periods. Import your timetable with AI vision or Excel, form private campus squads, and discover the exact minutes when everyone is free.
+          </p>
+          <div class="hero-actions">
+            <button id="hero-google-btn" class="btn-primary btn-lg">
+              <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#fff"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#fff"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fff"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#fff"/></svg>
+              Get Started with Google
+            </button>
+            <a href="#how-it-works" class="btn-secondary btn-lg">Explore How It Works</a>
+          </div>
+
+          <!-- Bespoke Schedule Convergence Visual -->
+          <div class="schedule-convergence-visual">
+            <div class="convergence-header">
+              <div class="convergence-title-group">
+                <h4>Schedule Convergence Engine</h4>
+                <p>How UniSync discovers mutual free windows across staggered 50-minute and 1-hour university periods</p>
+              </div>
+              <span class="convergence-badge">
+                <span class="badge-pulse-dot"></span>
+                Live Demonstration
+              </span>
+            </div>
+
+            <!-- Convergence Timeline Viewport (Scrollable on small screens) -->
+            <div class="convergence-viewport">
+              <div class="convergence-timeline-table">
+                <!-- Time Scale Header Row -->
+                <div class="conv-grid-header">
+                  <div class="conv-gutter-label">Student</div>
+                  <div class="conv-col-hour">09:00 AM</div>
+                  <div class="conv-col-hour">10:00 AM</div>
+                  <div class="conv-col-hour">11:00 AM</div>
+                  <div class="conv-col-hour conv-highlight-col">
+                    <span class="conv-free-pill-top">☕ Shared Free Hour</span>
+                    12:00 – 1:00 PM
+                  </div>
+                  <div class="conv-col-hour">01:00 PM</div>
+                  <div class="conv-col-hour">02:00 PM</div>
+                  <div class="conv-col-hour">03:00 PM</div>
+                </div>
+
+                <!-- Track 1: Aarav (CSE) -->
+                <div class="conv-grid-row">
+                  <div class="conv-person-cell">
+                    <div class="timeline-avatar avatar-aarav">A</div>
+                    <div class="person-meta">
+                      <span class="person-name">Aarav</span>
+                      <span class="person-dept">CSE • 50m</span>
+                    </div>
+                  </div>
+                  <div class="conv-period-cell"><div class="demo-class-pill">08:30–09:20<br><strong>Data Structures</strong></div></div>
+                  <div class="conv-period-cell"><div class="demo-class-pill">10:20–11:10<br><strong>Algorithms</strong></div></div>
+                  <div class="conv-period-cell"><div class="demo-free-mini">Lab Prep</div></div>
+                  <div class="conv-period-cell conv-highlight-cell">
+                    <div class="demo-free-shared-pill">
+                      <span class="free-badge-dot"></span>
+                      <strong>Free Together</strong>
+                      <span>12:00 – 1:00 PM</span>
+                    </div>
+                  </div>
+                  <div class="conv-period-cell"><div class="demo-class-pill">13:40–15:20<br><strong>OS Lab</strong></div></div>
+                  <div class="conv-period-cell"><div class="demo-class-pill" style="opacity:0.8;">OS Lab (cont.)</div></div>
+                  <div class="conv-period-cell"><div class="demo-free-mini">Free</div></div>
+                </div>
+
+                <!-- Track 2: Meera (Mech) -->
+                <div class="conv-grid-row">
+                  <div class="conv-person-cell">
+                    <div class="timeline-avatar avatar-meera">M</div>
+                    <div class="person-meta">
+                      <span class="person-name">Meera</span>
+                      <span class="person-dept">Mech • 60m</span>
+                    </div>
+                  </div>
+                  <div class="conv-period-cell"><div class="demo-class-pill">09:00–10:00<br><strong>Thermodynamics</strong></div></div>
+                  <div class="conv-period-cell"><div class="demo-free-mini">Tutorial</div></div>
+                  <div class="conv-period-cell"><div class="demo-class-pill">11:10–12:00<br><strong>Fluid Mech.</strong></div></div>
+                  <div class="conv-period-cell conv-highlight-cell">
+                    <div class="demo-free-shared-pill">
+                      <span class="free-badge-dot"></span>
+                      <strong>Free Together</strong>
+                      <span>12:00 – 1:00 PM</span>
+                    </div>
+                  </div>
+                  <div class="conv-period-cell"><div class="demo-class-pill">13:50–15:15<br><strong>Machine Design</strong></div></div>
+                  <div class="conv-period-cell"><div class="demo-class-pill" style="opacity:0.8;">Machine Design</div></div>
+                  <div class="conv-period-cell"><div class="demo-free-mini">Free</div></div>
+                </div>
+
+                <!-- Track 3: Kabir (Design) -->
+                <div class="conv-grid-row">
+                  <div class="conv-person-cell">
+                    <div class="timeline-avatar avatar-kabir">K</div>
+                    <div class="person-meta">
+                      <span class="person-name">Kabir</span>
+                      <span class="person-dept">Design • Studio</span>
+                    </div>
+                  </div>
+                  <div class="conv-period-cell"><div class="demo-class-pill">08:20–09:10<br><strong>Typography</strong></div></div>
+                  <div class="conv-period-cell"><div class="demo-class-pill">10:00–11:00<br><strong>Design Systems</strong></div></div>
+                  <div class="conv-period-cell"><div class="demo-free-mini">Studio Review</div></div>
+                  <div class="conv-period-cell conv-highlight-cell">
+                    <div class="demo-free-shared-pill">
+                      <span class="free-badge-dot"></span>
+                      <strong>Free Together</strong>
+                      <span>12:00 – 1:00 PM</span>
+                    </div>
+                  </div>
+                  <div class="conv-period-cell"><div class="demo-class-pill">13:00–14:30<br><strong>Studio Workshop</strong></div></div>
+                  <div class="conv-period-cell"><div class="demo-class-pill" style="opacity:0.8;">Studio (cont.)</div></div>
+                  <div class="conv-period-cell"><div class="demo-free-mini">Free</div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Convergence Result Callout -->
+            <div class="shared-free-window">
+              <div class="shared-free-info">
+                <div class="shared-pulse-dot"></div>
+                <div class="shared-free-text">
+                  <strong>Shared Free Window Discovered: 12:00 PM – 1:00 PM (1 Hour)</strong>
+                  <p>All 3 friends are out of class simultaneously. Calculated automatically across staggered 50m and 60m bell schedules.</p>
+                </div>
+              </div>
+              <span class="status-badge free">100% Free Together</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: The Student Scheduling Dilemma -->
+        <section class="landing-section" id="problem">
+          <div class="section-head">
+            <span class="section-tag">The Campus Reality</span>
+            <h2>Why coordinating university schedules is exhausting</h2>
+            <p>Every department runs on different bells. Staggered start times and irregular lab sessions leave college friends disconnected.</p>
+          </div>
+
+          <div class="editorial-grid-3">
+            <div class="editorial-card">
+              <div class="card-num">01</div>
+              <h3>The 50-Minute Asymmetry</h3>
+              <p>One friend has classes from 08:30 to 09:20. Another starts at 09:00. Standard calendars force rigid 1-hour blocks that falsely claim people are free when they're sitting in lecture halls.</p>
+            </div>
+            <div class="editorial-card">
+              <div class="card-num">02</div>
+              <h3>Group Chat Coordination Fatigue</h3>
+              <p>“Who’s free after 2 PM?” “I have physics lab until 4.” “Can we do 4:30?” “I have tutorial.” Ten messages back and forth just to discover a 30-minute window for coffee or project prep.</p>
+            </div>
+            <div class="editorial-card">
+              <div class="card-num">03</div>
+              <h3>Lost Spontaneous Serendipity</h3>
+              <p>The best university moments happen in the unscheduled 45-minute gaps between lectures. Without visibility, you sit in the library while your closest friends are sitting alone across campus.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 3: How UniSync Works -->
+        <section class="landing-section" id="how-it-works">
+          <div class="section-head">
+            <span class="section-tag">How It Works</span>
+            <h2>Three steps to synchronized free time</h2>
+            <p>No manual calendar entry. No sharing screenshots every Monday. UniSync does the heavy lifting.</p>
+          </div>
+
+          <div class="editorial-grid-3">
+            <div class="editorial-card">
+              <div class="card-num">Step 1</div>
+              <h3>Import Any Timetable</h3>
+              <p>Take a quick photo of your college timetable or upload your Excel sheet. Our AI extracts period headers, 50-minute blocks, subjects, and rooms with interactive review.</p>
+            </div>
+            <div class="editorial-card">
+              <div class="card-num">Step 2</div>
+              <h3>Create Private Squads</h3>
+              <p>Form invite-only circles with your branch mates, study buddies, or project group using a 6-character code. Your data stays strictly inside your trusted circle.</p>
+            </div>
+            <div class="editorial-card">
+              <div class="card-num">Step 3</div>
+              <h3>Find Shared Windows</h3>
+              <p>Pick any group of friends and see the exact continuous hours and minutes when everyone is free. Filter by minimum duration like 30 minutes, 45 minutes, or 1 hour.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 4: Universal Timetable Importing -->
+        <section class="landing-section" id="features">
+          <div class="dual-split-section">
+            <div class="dual-split-content">
+              <span class="section-tag">Universal Ingestion</span>
+              <h2>AI Vision Scanner &amp; Native Excel Parser</h2>
+              <p>Whether your university provides an official Excel sheet or a printed schedule on the department notice board, UniSync imports it in seconds.</p>
+              <ul class="feature-checklist">
+                <li><strong>Gemini Vision AI:</strong> High-precision OCR trained to read table column headers (08:30–09:20, 08:20–09:10, 09:00–10:00).</li>
+                <li><strong>SheetJS Integration:</strong> Direct .xlsx / .xls parsing without manual transcription.</li>
+                <li><strong>Interactive Review Table:</strong> Edit any detected room, timing, or subject on screen before saving.</li>
+                <li><strong>Manual Class Builder:</strong> Add or modify single periods anytime as semesters shift.</li>
+              </ul>
+            </div>
+            <div class="interactive-mockup">
+              <div class="mockup-tab-bar">
+                <span class="mockup-tab active">AI Vision Review</span>
+                <span class="mockup-tab">Excel Parse</span>
+                <span class="mockup-tab">Manual Edit</span>
+              </div>
+              <div style="background:var(--canvas); border-radius:var(--r-md); padding:16px; border:1px solid var(--border);">
+                <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:0.78rem; font-weight:700; color:var(--ink-muted);">
+                  <span>DAY &amp; TIME</span>
+                  <span>SUBJECT</span>
+                  <span>ROOM</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px solid var(--border); font-size:0.84rem;">
+                  <span>Mon • 08:30 – 09:20</span>
+                  <strong>Data Structures</strong>
+                  <span style="color:var(--forest);">📍 36-809</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px solid var(--border); font-size:0.84rem;">
+                  <span>Mon • 10:20 – 11:10</span>
+                  <strong>Algorithms</strong>
+                  <span style="color:var(--forest);">📍 34-201</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:1px solid var(--border); font-size:0.84rem;">
+                  <span>Mon • 13:40 – 15:20</span>
+                  <strong>Operating Systems Lab</strong>
+                  <span style="color:var(--forest);">📍 Lab 4</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 6: Mathematical Free-Time Engine -->
+        <section class="landing-section" id="free-time-engine">
+          <div class="section-head">
+            <span class="section-tag">Core Technology</span>
+            <h2>The Continuous Interval Matching Engine</h2>
+            <p>We solved the hard problem: calculating mathematical intersections across non-standard schedules.</p>
+          </div>
+
+          <div class="editorial-grid-3">
+            <div class="editorial-card">
+              <h3>Minute-by-Minute Overlap</h3>
+              <p>Instead of matching rigid slot strings like "09:30 - 10:20", UniSync converts every timetable entry into minutes from midnight. Classes overlap only when mathematically confirmed.</p>
+            </div>
+            <div class="editorial-card">
+              <h3>Disjoint Gap Inversion</h3>
+              <p>We merge all squad members' busy intervals, sort them, and invert them against university active hours. The remaining gaps are 100% guaranteed free time for everyone.</p>
+            </div>
+            <div class="editorial-card">
+              <h3>Duration Thresholds</h3>
+              <p>Filter out negligible 5-minute passing breaks. Choose minimum hangout duration (at least 30 minutes, 45 minutes, or 1 hour) so every suggested slot is actionable.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 9: Frequently Asked Questions -->
+        <section class="landing-section" id="faq">
+          <div class="section-head">
+            <span class="section-tag">Frequently Asked</span>
+            <h2>Common questions from students</h2>
+          </div>
+
+          <div class="faq-wrap">
+            <div class="faq-item open">
+              <button class="faq-question">
+                <span>Does UniSync work with non-standard 50-minute periods?</span>
+                <span class="faq-arrow">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>Yes, absolutely. Unlike standard calendar apps that assume 1-hour slots, UniSync was engineered specifically for universities where classes run for 45, 50, or 90 minutes with custom start times like 08:20, 08:30, or 09:25.</p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <span>How accurate is the AI timetable photo scanner?</span>
+                <span class="faq-arrow">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>UniSync uses Gemini Vision AI configured to read period column headers and trace day rows. After scanning, it presents an interactive review table where you can verify, edit, or add any class in seconds before saving to your profile.</p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <span>Who can see my classes and room locations?</span>
+                <span class="faq-arrow">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>Only verified members who join your private squad using your group's unique 6-character invite code can see your timetable. You can leave or delete groups at any time, and squad admins have full member moderation controls.</p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <span>Can I update or add a single class if my timetable changes?</span>
+                <span class="faq-arrow">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>Yes. UniSync includes an interactive manual class builder right inside your timetable view. You can add individual classes, modify timings, or completely replace your schedule anytime.</p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <span>Is UniSync free to use for college students?</span>
+                <span class="faq-arrow">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>UniSync is completely free for university students. Simply sign in with your Google account to create your profile and start syncing with your squad.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 10: Final CTA -->
+        <div class="final-cta-section">
+          <h2>Ready to stop asking who's free?</h2>
+          <p>Sync your semester with your squad. Experience campus life with effortless coordination.</p>
+          <button id="final-cta-btn" class="btn-primary btn-lg" style="background:#fff; color:var(--forest-deep);">
+            Sign in with Google to Get Started
+          </button>
+        </div>
+
+        <!-- Footer -->
+        <footer class="site-footer">
+          <div class="footer-top">
+            <div class="footer-brand">
+              <h3>UniSync</h3>
+              <p>Different schedules. Shared moments. The student availability and timetable collaboration platform for higher education.</p>
+            </div>
+            <div>
+              <h4 style="font-size:0.9rem; margin-bottom:8px;">Platform</h4>
+              <p style="font-size:0.85rem;"><a href="#features">AI Timetable Scan</a></p>
+              <p style="font-size:0.85rem;"><a href="#free-time-engine">Free-Time Discovery</a></p>
+              <p style="font-size:0.85rem;"><a href="#how-it-works">Squad Collaboration</a></p>
+            </div>
+            <div>
+              <h4 style="font-size:0.9rem; margin-bottom:8px;">Campus Privacy</h4>
+              <p style="font-size:0.85rem; color:var(--ink-secondary);">Invite-only groups</p>
+              <p style="font-size:0.85rem; color:var(--ink-secondary);">Private Firestore security</p>
+              <p style="font-size:0.85rem; color:var(--ink-secondary);">Google OAuth 2.0</p>
+            </div>
+          </div>
+          <div class="footer-bottom">
+            <span>&copy; 2026 UniSync. Crafted for connected university life.</span>
+            <span>Built with independent product design principles.</span>
+          </div>
+        </footer>
+
+      </section>
+
+
+      <!-- ====================================================
+           VIEW 1: PERSONAL STUDENT WORKSPACE / DASHBOARD
+      ==================================================== -->
+      <section id="dashboard-view" class="view">
+        <div class="dashboard-hero-banner">
+          <div class="greeting-text">
+            <h2 id="dash-greeting">Good day, Student</h2>
+            <p id="dash-date-str">Loading campus date and active squad...</p>
+          </div>
+          <div class="pulse-badge-card" id="dash-pulse-badge">
+            <div class="shared-pulse-dot" id="dash-pulse-dot"></div>
+            <div>
+              <strong id="dash-live-status-title" style="font-size:0.92rem; display:block;">Checking presence...</strong>
+              <span id="dash-live-status-sub" style="font-size:0.78rem; color:var(--ink-muted);">Updating live schedule</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric Pulse Row -->
+        <div class="metrics-row">
+          <div class="metric-box">
+            <span class="metric-label">Today's Classes</span>
+            <span class="metric-val" id="metric-today-classes">0</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-label">Squad Members</span>
+            <span class="metric-val" id="metric-squad-count">0</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-label">Squad Free Right Now</span>
+            <span class="metric-val" id="metric-free-now" style="color:var(--forest);">0</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-label">Squad Invite Code</span>
+            <span class="metric-val" id="metric-invite-code" style="font-family:var(--font-mono); font-size:1.25rem;">—</span>
+          </div>
+        </div>
+
+        <!-- Today's Schedule Card -->
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-4);">
+            <div>
+              <h3 style="font-size:1.25rem; margin-bottom:2px;">Today's Classes</h3>
+              <p style="font-size:0.82rem; color:var(--ink-muted);">Chronological periods for today</p>
+            </div>
+            <button class="btn-secondary btn-sm" id="dash-view-full-timetable">View Full Week &rarr;</button>
+          </div>
+          <div id="dash-today-schedule-list" class="slot-list">
+            <div class="empty-state" style="padding:2rem 1rem; text-align:center; color:var(--ink-muted);">
+              Loading today's classes...
+            </div>
+          </div>
+        </div>
+
+        <!-- Squad Availability Right Now -->
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-4);">
+            <div>
+              <h3 style="font-size:1.25rem; margin-bottom:2px;">Squad Members Right Now</h3>
+              <p style="font-size:0.82rem; color:var(--ink-muted);">Live presence across your campus squad</p>
+            </div>
+            <button class="btn-primary btn-sm" id="dash-find-free-slots-btn">Find Common Free Time</button>
+          </div>
+          <div id="dash-squad-presence-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:10px;">
+            <div style="color:var(--ink-muted); font-size:0.86rem;">Checking squad presence...</div>
+          </div>
         </div>
       </section>
 
-      <!-- ── 1. MY TIMETABLE ────────────────────────── -->
+
+      <!-- ====================================================
+           VIEW 2: MY TIMETABLE
+      ==================================================== -->
       <section id="upload-view" class="view">
-        <div class="page-header">
-          <h1>My Timetable</h1>
-          <p>Your schedule for the active group.</p>
+        <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:var(--space-3);">
+          <div>
+            <h1>My Timetable</h1>
+            <p>Your academic schedule for the active squad.</p>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button id="open-manual-class-modal-btn" class="btn-primary btn-sm">+ Add Class Manually</button>
+            <button id="toggle-import-panel-btn" class="btn-secondary btn-sm">↻ Import / Replace</button>
+          </div>
         </div>
 
         <div class="card">
-          <p id="my-timetable-status" class="upload-status-tag empty">Not uploaded yet</p>
-
-          <!-- Upload Form: Excel + AI Scan tabs -->
-          <div id="upload-form" class="hidden">
-
-            <!-- Notice for returning users -->
-            <div class="reupload-notice hidden" id="reupload-notice">
-              ⚠️ If you uploaded before April 2026, please re-upload your timetable — the format has been updated to use exact LPU time slots.
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:var(--space-3); margin-bottom:var(--space-4);">
+            <p id="my-timetable-status" class="upload-status-tag empty">Not uploaded yet</p>
+            
+            <!-- View Mode Switcher -->
+            <div class="timetable-view-toggle">
+              <button class="view-toggle-btn active" id="btn-toggle-matrix">Weekly Matrix</button>
+              <button class="view-toggle-btn" id="btn-toggle-cards">Day Cards</button>
+              <button class="view-toggle-btn" id="btn-toggle-table">Table Editor</button>
             </div>
+          </div>
 
-            <!-- ── Tab Switcher ── -->
+          <!-- ── Import Form Area (Hidden when schedule exists, toggleable) ── -->
+          <div id="upload-form" class="hidden" style="margin-bottom:var(--space-8); padding-bottom:var(--space-6); border-bottom:1px solid var(--border);">
             <div class="upload-tabs" id="upload-tabs">
               <button class="upload-tab active" id="tab-excel" data-tab="excel">
-                <span>📊</span> Upload Excel
+                <span>📊</span> Upload Excel (.xlsx)
               </button>
               <button class="upload-tab" id="tab-ai" data-tab="ai">
-                <span>✨</span> Scan with AI
+                <span>✨</span> Scan Image with AI
               </button>
             </div>
 
-            <!-- ── EXCEL TAB ── -->
+            <!-- Excel Tab -->
             <div id="tab-panel-excel" class="tab-panel">
               <div class="file-drop-area" id="file-drop-area">
                 <span class="drop-icon">📊</span>
-                <span class="drop-text">Drag &amp; drop your LPU timetable (.xlsx)<br><small style="color:var(--text-muted);">or click to browse</small></span>
+                <span class="drop-text">Drag &amp; drop your timetable file (.xlsx)<br><small style="color:var(--ink-muted);">or click to browse from device</small></span>
                 <input type="file" id="timetable-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
               </div>
             </div>
 
-            <!-- ── AI SCAN TAB ── -->
+            <!-- AI Scan Tab -->
             <div id="tab-panel-ai" class="tab-panel hidden">
-              <!-- Image Drop Zone -->
-              <div class="file-drop-area ai-drop-zone" id="image-drop-area">
-                <span class="drop-icon">🖼️</span>
-                <span class="drop-text">Drag &amp; drop your timetable screenshot (.png / .jpg)<br><small style="color:var(--text-muted);">or click to browse</small></span>
-                <input type="file" id="timetable-image" accept="image/png,image/jpeg,image/webp" />
+              <div class="file-drop-area" id="image-drop-area">
+                <span class="drop-icon">📷</span>
+                <span class="drop-text">Upload a clear photo or screenshot of your timetable<br><small style="color:var(--ink-muted);">PNG or JPG • Gemini Vision AI will parse period headers &amp; rooms</small></span>
+                <input type="file" id="timetable-image" accept="image/png,image/jpeg,image/webp,image/jpg" />
               </div>
-
-              <!-- Image Preview (shows after file selected) -->
               <div id="image-preview-wrap" class="hidden" style="margin-top:var(--space-4);">
-                <div class="image-preview-box">
-                  <img id="image-preview-thumb" src="" alt="Timetable preview" />
-                  <div class="image-preview-overlay">
-                    <span id="image-preview-filename" class="image-filename"></span>
-                    <button id="change-image-btn" class="secondary-btn btn-sm">Change Image</button>
+                <div class="image-preview-box" style="position:relative; max-width:320px; margin:0 auto; border-radius:var(--r-md); overflow:hidden; border:1px solid var(--border);">
+                  <img id="image-preview-thumb" src="" alt="Screenshot Preview" style="width:100%; display:block;" />
+                  <div style="padding:8px; background:var(--surface); display:flex; justify-content:space-between; align-items:center;">
+                    <span id="image-preview-filename" style="font-size:0.75rem; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:180px;"></span>
+                    <button id="change-image-btn" class="btn-secondary btn-sm" style="font-size:0.75rem; padding:2px 8px; min-height:26px;">Change</button>
                   </div>
                 </div>
-                <button id="scan-image-btn" class="primary-btn scan-btn" style="margin-top:var(--space-4); width:100%;">
-                  <span class="scan-btn-icon">✨</span> Scan with Gemini AI
+                <button id="scan-image-btn" class="btn-primary" style="margin-top:var(--space-4); width:100%;">
+                  ✨ Scan Image with Gemini AI
                 </button>
               </div>
             </div>
 
-            <!-- ── Shared: Parsing Status ── -->
+            <!-- Parsing Status Spinner -->
             <div id="upload-status" class="status-message hidden" style="margin-top:var(--space-4);">
               <div class="spinner"></div>
               <span id="status-text">Parsing file...</span>
             </div>
 
-            <!-- ── Shared: Preview Panel (shown after parsing) ── -->
-            <div id="preview-panel" class="hidden" style="margin-top:var(--space-5);">
-              <div class="preview-header">
+            <!-- Editable Review Table Panel -->
+            <div id="preview-panel" class="hidden" style="margin-top:var(--space-6);">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-2);">
                 <div>
-                  <h3 style="margin:0 0 4px;">Parsed Timetable Preview</h3>
-                  <p id="preview-meta" style="font-size:0.82rem; color:var(--text-muted); margin:0;"></p>
+                  <h3 style="font-size:1.15rem; margin-bottom:2px;">Extracted Classes Preview</h3>
+                  <p id="preview-meta" style="font-size:0.8rem; color:var(--ink-muted); margin:0;"></p>
                 </div>
+                <button id="add-class-btn" type="button" class="btn-secondary btn-sm" style="color:var(--forest); border-color:var(--forest);">
+                  + Add Class Row
+                </button>
               </div>
+              <p style="font-size:0.78rem; color:var(--ink-secondary); margin-bottom:var(--space-3);">
+                💡 Tip: Every field is editable. Verify your period times (e.g. 08:30 – 09:20) and click save.
+              </p>
               <div class="preview-table-wrapper">
                 <table id="preview-table" class="preview-table">
                   <thead>
                     <tr>
                       <th>Day</th>
-                      <th>Time</th>
+                      <th>Start</th>
+                      <th>End</th>
                       <th>Subject</th>
                       <th>Type</th>
                       <th>Room</th>
                       <th>Batch</th>
+                      <th style="text-align:center;">Action</th>
                     </tr>
                   </thead>
                   <tbody id="preview-tbody"></tbody>
                 </table>
               </div>
-              <div class="preview-actions" style="margin-top:var(--space-4); display:flex; gap:var(--space-3);">
-                <button id="save-timetable-btn" class="primary-btn">✓ Looks good, Save</button>
-                <button id="reupload-btn" class="secondary-btn">↩ Re-upload</button>
+              <div style="display:flex; gap:var(--space-3); margin-top:var(--space-4);">
+                <button id="save-timetable-btn" class="btn-primary">✓ Looks good, Save Timetable</button>
+                <button id="reupload-btn" class="btn-secondary">↩ Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Display Area: Matrix and Day Cards ── -->
+          <div id="timetable-display-area" class="hidden">
+            <!-- Weekly Matrix Grid -->
+            <div id="weekly-matrix-container" class="weekly-matrix-wrapper">
+              <div class="weekly-matrix" id="weekly-matrix-grid"></div>
+            </div>
+
+            <!-- Day Cards Container -->
+            <div id="day-cards-wrapper" class="day-cards-container hidden">
+              <div id="my-calendar-grid"></div>
+            </div>
+
+            <!-- Full Schedule Table Editor -->
+            <div id="table-editor-wrapper" class="hidden" style="margin-top:var(--space-2);">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:var(--space-3); margin-bottom:var(--space-4);">
+                <div>
+                  <h3 style="font-size:1.15rem; margin-bottom:2px;">Full Schedule Table Editor</h3>
+                  <p style="font-size:0.8rem; color:var(--ink-muted);">Directly edit any period, add or remove classes across the week, then save changes.</p>
+                </div>
+                <div style="display:flex; gap:8px;">
+                  <button id="table-editor-add-row-btn" type="button" class="btn-secondary btn-sm" style="color:var(--forest); border-color:var(--forest);">
+                    + Add Class Row
+                  </button>
+                  <button id="table-editor-save-btn" type="button" class="btn-primary btn-sm">
+                    💾 Save All Changes
+                  </button>
+                </div>
+              </div>
+              <div class="preview-table-wrapper">
+                <table class="preview-table">
+                  <thead>
+                    <tr>
+                      <th>Day</th>
+                      <th>Start Time</th>
+                      <th>End Time</th>
+                      <th>Subject / Course</th>
+                      <th>Type</th>
+                      <th>Room</th>
+                      <th>Batch</th>
+                      <th style="text-align:center;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-editor-tbody"></tbody>
+                </table>
               </div>
             </div>
 
-          </div>
-
-          <div id="timetable-display-area" class="hidden">
-            <div class="calendar-wrapper">
-              <div id="my-calendar-grid" class="calendar-grid"></div>
-            </div>
-            <div style="margin-top: var(--space-5);">
-              <button id="trigger-update-btn" class="secondary-btn btn-auto" style="color: var(--red); border-color: var(--red);">
-                ↻ Update My Timetable
+            <div style="margin-top: var(--space-6); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <span style="font-size:0.8rem; color:var(--ink-muted);">💡 Tip: Click any class card in Matrix or Day view to edit or delete it immediately.</span>
+              <button id="trigger-update-btn" class="btn-secondary btn-sm" style="color:var(--terracotta); border-color:var(--terracotta);">
+                🗑️ Clear &amp; Re-import
               </button>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ── MODAL: UPDATE WARNING ──────────────────── -->
-      <div id="update-warning-modal" class="modal-overlay hidden">
-        <div class="modal-box">
-          <div style="font-size:2.5rem; margin-bottom:var(--space-4);">⚠️</div>
-          <h2>Replace Timetable?</h2>
-          <p>Your current timetable will be permanently deleted and replaced. This cannot be undone.</p>
-          <div class="modal-actions">
-            <button id="cancel-update-btn" class="secondary-btn">Cancel</button>
-            <button id="confirm-update-btn" class="primary-btn" style="background: var(--red); box-shadow: 0 2px 8px rgba(239,68,68,0.3);">Yes, Replace</button>
-          </div>
-        </div>
-      </div>
 
-      <!-- ── 2. FIND A FRIEND ───────────────────────── -->
+      <!-- ====================================================
+           VIEW 3: FIND A FRIEND & COMPARE
+      ==================================================== -->
       <section id="find-view" class="view">
         <div class="page-header">
-          <h1>Find a Friend</h1>
-          <p>Search for group members by name.</p>
+          <h1>Find Friends</h1>
+          <p>Search squad members, view their shared schedules, and find 1-on-1 free time.</p>
         </div>
+
         <div class="card">
-          <div class="search-bar">
-            <input type="text" id="search-input" placeholder="Search by name…" />
-            <button id="search-btn" class="primary-btn btn-auto">Search</button>
+          <div class="search-bar-wrap">
+            <svg class="search-bar-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="search-input" placeholder="Search friends by name or nickname…" />
+            <button id="search-btn" class="btn-primary btn-sm">Search</button>
           </div>
-          <div id="search-results" class="search-results"></div>
+          <div id="search-results" style="display:flex; flex-direction:column; gap:8px; margin-top:var(--space-5);"></div>
         </div>
+
+        <!-- Friend Schedule Display Area -->
         <div id="friend-schedule-container" class="card hidden">
-          <h3 id="friend-name-display" style="margin-bottom:var(--space-5);">Timetable for <span></span></h3>
-          <div class="calendar-wrapper">
-            <div id="calendar-grid" class="calendar-grid"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:var(--space-3); margin-bottom:var(--space-5);">
+            <h3 id="friend-name-display">Timetable for <span></span></h3>
+            <button id="compare-friend-btn" class="btn-primary btn-sm" style="background:var(--terracotta);">
+              ⚡ Compare Free Time with Me
+            </button>
           </div>
+
+          <!-- 1-on-1 Compare Results Banner (Dynamically generated) -->
+          <div id="friend-compare-results" class="hidden" style="margin-bottom:var(--space-6); padding:var(--space-5); background:var(--surface-warm); border:1px solid var(--border); border-radius:var(--r-lg);"></div>
+
+          <div id="calendar-grid" class="day-cards-container"></div>
         </div>
       </section>
 
-      <!-- ── 3. SQUAD OVERVIEW ──────────────────────── -->
+
+      <!-- ====================================================
+           VIEW 4: SQUAD OVERVIEW
+      ==================================================== -->
       <section id="squad-view" class="view">
         <div class="page-header">
           <h1>Squad Overview</h1>
-          <p>See your entire group's status at a specific time.</p>
+          <p>Check your entire squad's status across any day and period of the week.</p>
         </div>
+
         <div class="card">
           <div class="filter-bar">
             <div class="form-group">
-              <label>Day</label>
+              <label for="day-select">Day</label>
               <select id="day-select">
                 <option value="Monday">Monday</option>
                 <option value="Tuesday">Tuesday</option>
@@ -209,81 +771,193 @@
                 <option value="Thursday">Thursday</option>
                 <option value="Friday">Friday</option>
                 <option value="Saturday">Saturday</option>
+                <option value="Sunday">Sunday</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Time Slot</label>
+              <label for="time-select">Time</label>
               <select id="time-select">
-                <option value="09:30 - 10:20">09:30 – 10:20</option>
-                <option value="10:20 - 11:10">10:20 – 11:10</option>
-                <option value="11:10 - 12:00">11:10 – 12:00</option>
-                <option value="12:00 - 12:50">12:00 – 12:50</option>
-                <option value="12:50 - 13:40">12:50 – 13:40</option>
-                <option value="13:40 - 14:30">13:40 – 14:30</option>
-                <option value="14:00 - 15:00">14:00 – 15:00</option>
-                <option value="14:30 - 15:20">14:30 – 15:20</option>
-                <option value="15:20 - 16:10">15:20 – 16:10</option>
-                <option value="21:00 - 22:00">21:00 – 22:00</option>
+                <option value="08:00">08:00 AM</option>
+                <option value="08:20">08:20 AM</option>
+                <option value="08:30" selected>08:30 AM</option>
+                <option value="09:00">09:00 AM</option>
+                <option value="09:30">09:30 AM</option>
+                <option value="10:00">10:00 AM</option>
+                <option value="10:20">10:20 AM</option>
+                <option value="10:30">10:30 AM</option>
+                <option value="11:00">11:00 AM</option>
+                <option value="11:10">11:10 AM</option>
+                <option value="11:30">11:30 AM</option>
+                <option value="12:00">12:00 PM</option>
+                <option value="12:30">12:30 PM</option>
+                <option value="12:50">12:50 PM</option>
+                <option value="13:00">01:00 PM</option>
+                <option value="13:30">01:30 PM</option>
+                <option value="13:40">01:40 PM</option>
+                <option value="14:00">02:00 PM</option>
+                <option value="14:30">02:30 PM</option>
+                <option value="15:00">03:00 PM</option>
+                <option value="15:20">03:20 PM</option>
+                <option value="15:30">03:30 PM</option>
+                <option value="16:00">04:00 PM</option>
+                <option value="16:30">04:30 PM</option>
+                <option value="17:00">05:00 PM</option>
+                <option value="18:00">06:00 PM</option>
+                <option value="custom">Custom Time…</option>
               </select>
+              <input type="time" id="squad-custom-time" class="hidden" style="margin-top:6px;" />
             </div>
-            <button id="check-squad-btn" class="primary-btn">Check Squad</button>
+            <button id="check-squad-btn" class="btn-primary" style="height:44px; margin-bottom:1px;">Check Squad</button>
           </div>
-          <div id="squad-results" class="squad-results">
-            <div class="empty-state">
-              <span class="empty-icon">📅</span>
-              <p>Select a day and time to check your squad's status</p>
+
+          <div id="squad-results">
+            <div class="empty-state" style="text-align:center; padding:2.5rem 1rem; color:var(--ink-muted);">
+              Select a day and time to check your squad's status.
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ── 4. FREE SLOT FINDER ────────────────────── -->
+
+      <!-- ====================================================
+           VIEW 5: COMMON FREE SLOT FINDER
+      ==================================================== -->
       <section id="free-slots-view" class="view">
         <div class="page-header">
-          <h1>Free Slot Finder</h1>
-          <p>Select friends to find times when everyone is free.</p>
+          <h1>Common Free Slots</h1>
+          <p>Select friends from your squad to discover when everyone is free together.</p>
         </div>
+
         <div class="card">
+          <label style="font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-muted); margin-bottom:8px; display:block;">Select Friends</label>
           <div id="friend-checkbox-list" class="checkbox-list"></div>
-          <button id="find-common-slots-btn" class="primary-btn">Find Common Free Time</button>
-          <div id="common-slots-results" class="common-results"></div>
-        </div>
-      </section>
 
-      <!-- ── 5. RIGHT NOW ───────────────────────────── -->
-      <section id="right-now-view" class="view">
-        <div class="page-header">
-          <h1>Right Now</h1>
-          <p>Live status of every member in your group.</p>
-        </div>
-        <div class="card">
-          <div class="live-header">
-            <div>
-              <h2 style="display:flex; align-items:center; gap:8px;">
-                Live Status
-                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green);"></span>
-              </h2>
-              <p id="current-time-display" style="font-weight:600; color:var(--accent); font-size:0.9rem; margin-top:2px;">Loading…</p>
+          <div class="filter-bar" style="margin-top:var(--space-4);">
+            <div class="form-group">
+              <label for="min-free-duration">Minimum Free Duration</label>
+              <select id="min-free-duration">
+                <option value="20">At least 20 minutes</option>
+                <option value="30" selected>At least 30 minutes</option>
+                <option value="45">At least 45 minutes</option>
+                <option value="60">At least 1 hour</option>
+              </select>
             </div>
-            <button id="refresh-now-btn" class="secondary-btn btn-auto btn-sm">↻ Refresh</button>
+            <div class="form-group">
+              <label for="free-time-window">Active College Hours</label>
+              <select id="free-time-window">
+                <option value="8-18" selected>College Hours (8:00 AM – 6:00 PM)</option>
+                <option value="8-20">Extended Campus (8:00 AM – 8:00 PM)</option>
+                <option value="8-22">All Day (8:00 AM – 10:00 PM)</option>
+              </select>
+            </div>
           </div>
-          <div id="right-now-results" class="squad-results"></div>
+
+          <button id="find-common-slots-btn" class="btn-primary btn-lg" style="width:100%; margin-top:var(--space-2);">
+            Find Common Free Time
+          </button>
+
+          <div id="common-slots-results" style="margin-top:var(--space-6);"></div>
         </div>
       </section>
 
-      <!-- ── 6. PROFILE ─────────────────────────────── -->
+
+      <!-- ====================================================
+           VIEW 6: RIGHT NOW (LIVE TRACKER)
+      ==================================================== -->
+      <section id="right-now-view" class="view">
+        <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:var(--space-3);">
+          <div>
+            <h1>Right Now</h1>
+            <p id="current-time-display">Checking campus time...</p>
+          </div>
+          <button id="refresh-now-btn" class="btn-secondary btn-sm">↻ Refresh Status</button>
+        </div>
+
+        <div class="card">
+          <div id="right-now-results">
+            <div style="color:var(--ink-muted); padding:1rem;">Loading live status...</div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ====================================================
+           VIEW 7: MY SQUADS (GROUPS DASHBOARD)
+      ==================================================== -->
+      <section id="groups-view" class="view">
+        <div class="page-header">
+          <h1>My Squads</h1>
+          <p>Join study circles, branch groups, or dorm circles.</p>
+        </div>
+
+        <!-- Alert if group was deleted -->
+        <div id="onboard-panic-msg" class="hidden" style="background:var(--terracotta-subtle); border:1px solid var(--terracotta); color:var(--terracotta-dark); font-weight:600; font-size:0.88rem; padding:12px 16px; border-radius:var(--r-md); margin-bottom:var(--space-5);">
+          ⚠️ This group has been deleted by the admin.
+        </div>
+
+        <!-- Create & Join Cards -->
+        <div class="editorial-grid-3" style="grid-template-columns:1fr 1fr; margin-bottom:var(--space-8);">
+          <div class="card" style="margin-bottom:0;">
+            <div style="font-size:1.6rem; margin-bottom:8px;">➕</div>
+            <h3 style="margin-bottom:4px;">Create New Squad</h3>
+            <p style="font-size:0.86rem; margin-bottom:var(--space-4);">Start a private, invite-only group for your friends.</p>
+            <input type="text" id="create-group-name" placeholder="Squad Name (e.g. CS Section B)" style="margin-bottom:var(--space-3);" />
+            <button id="create-group-btn" class="btn-primary" style="width:100%;">Create Squad</button>
+          </div>
+
+          <div class="card" style="margin-bottom:0;">
+            <div style="font-size:1.6rem; margin-bottom:8px;">🔑</div>
+            <h3 style="margin-bottom:4px;">Join a Squad</h3>
+            <p style="font-size:0.86rem; margin-bottom:var(--space-4);">Enter the 6-character code shared by your friend.</p>
+            <input type="text" id="join-group-code" placeholder="Invite Code (e.g. CLA-1234)" style="font-family:var(--font-mono); text-transform:uppercase; letter-spacing:2px; margin-bottom:var(--space-3);" />
+            <button id="join-group-btn" class="btn-primary" style="width:100%; background:var(--forest-dark);">Join Squad</button>
+          </div>
+        </div>
+
+        <div id="onboard-error" style="color:var(--terracotta); font-size:0.84rem; margin-bottom:var(--space-4);"></div>
+
+        <!-- Active Squads List -->
+        <div>
+          <h3 style="font-size:1.25rem; margin-bottom:var(--space-4);">Active Squads</h3>
+          <div id="my-groups-grid" class="groups-grid">
+            <div class="empty-state">Loading your squads...</div>
+          </div>
+        </div>
+
+        <button id="onboard-logout-btn" class="btn-secondary btn-sm hidden" style="margin-top:var(--space-6);">
+          Sign Out
+        </button>
+      </section>
+
+
+      <!-- ====================================================
+           VIEW 8: PROFILE & SETTINGS
+      ==================================================== -->
       <section id="profile-view" class="view">
         <div class="page-header">
-          <h1>Your Profile</h1>
-          <p>Set your display name for this group.</p>
+          <h1>Profile &amp; Settings</h1>
+          <p>Manage your campus identity and privacy settings.</p>
         </div>
-        <div class="card profile-card">
+
+        <div class="card" style="max-width:580px;">
           <form id="profile-form">
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom:var(--space-4);">
               <label for="display-name">Display Name</label>
-              <input type="text" id="display-name" placeholder="E.g., Rajesh Kumar" required />
+              <input type="text" id="display-name" placeholder="e.g. Aarav Sharma" required />
             </div>
-            <button type="submit" class="primary-btn" id="save-profile-btn">Save Profile</button>
+
+            <div class="form-group" style="margin-bottom:var(--space-4);">
+              <label for="profile-program">University Program / Branch (Optional)</label>
+              <input type="text" id="profile-program" placeholder="e.g. B.Tech Computer Science" />
+            </div>
+
+            <div class="form-group" style="margin-bottom:var(--space-6);">
+              <label for="profile-batch">Section / Batch (Optional)</label>
+              <input type="text" id="profile-batch" placeholder="e.g. K22AA / 2026" />
+            </div>
+
+            <button type="submit" class="btn-primary" id="save-profile-btn">Save Profile</button>
+
             <div id="profile-status" class="status-message hidden" style="margin-top:var(--space-4);">
               <span id="profile-status-text"></span>
             </div>
@@ -291,59 +965,134 @@
         </div>
       </section>
 
-      <!-- ── 7. MY GROUPS ───────────────────────────── -->
-      <section id="groups-view" class="view">
-        <div class="page-header">
-          <h1>My Groups</h1>
-          <p>Manage all your private groups in one place.</p>
-        </div>
-
-        <!-- Deleted group alert -->
-        <div id="onboard-panic-msg" class="hidden" style="background:var(--red-bg); border:1.5px solid rgba(239,68,68,0.3); color:var(--red); font-weight:600; font-size:0.88rem; padding:12px 16px; border-radius:var(--r-md); margin-bottom:var(--space-5);">
-          ⚠️ This group has been deleted by the admin.
-        </div>
-
-        <!-- Create & Join -->
-        <div class="action-grid">
-          <div class="action-card">
-            <div class="icon-block" style="background: rgba(79,70,229,0.1);">➕</div>
-            <h3>Create New Group</h3>
-            <p>Start a private, invite-only space for your squad.</p>
-            <input type="text" id="create-group-name" placeholder="Group name (e.g. CS Second Year)" />
-            <button id="create-group-btn" class="primary-btn">Create Group</button>
-          </div>
-
-          <div class="action-card">
-            <div class="icon-block" style="background: rgba(16,185,129,0.1);">🔑</div>
-            <h3>Join a Group</h3>
-            <p>Enter the invite code shared by a friend or admin.</p>
-            <input type="text" id="join-group-code" placeholder="Invite code (e.g. CLA-1234)" style="font-family: monospace; text-transform: uppercase; letter-spacing: 2px;" />
-            <button id="join-group-btn" class="primary-btn" style="background: var(--primary);">Join Group</button>
-          </div>
-        </div>
-
-        <div id="onboard-error" class="error-text" style="margin-top:var(--space-3);"></div>
-
-        <!-- Active groups list -->
-        <div style="margin-top: var(--space-8);">
-          <div class="section-divider">
-            <h3>Active Groups</h3>
-          </div>
-          <div id="my-groups-grid" class="groups-grid">
-            <div class="empty-state">
-              <span class="empty-icon">🏠</span>
-              <p>Loading your groups…</p>
-            </div>
-          </div>
-        </div>
-
-        <button id="onboard-logout-btn" class="secondary-btn btn-auto hidden" style="margin-top:var(--space-6);">
-          Sign Out
-        </button>
-      </section>
-
     </main>
 
-    <script type="module" src="./app.js"></script>
+
+    <!-- ====================================================
+         MODAL: ADD & EDIT CLASS (MOBILE BOTTOM SHEET & MODAL)
+    ==================================================== -->
+    <div id="manual-class-modal" class="modal-overlay hidden">
+      <div class="modal-box">
+        <div class="modal-mobile-handle"></div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-4);">
+          <div>
+            <span class="header-badge-tag" id="modal-badge-tag">MANUAL TIMETABLE ENTRY</span>
+            <h3 id="manual-modal-title" style="font-size:1.35rem; font-family:var(--font-serif); margin-top:2px;">Add Class to Schedule</h3>
+          </div>
+          <button id="close-manual-class-modal-btn" type="button" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--ink-muted); padding:4px;" title="Close">✕</button>
+        </div>
+        
+        <form id="manual-class-form">
+          <!-- Hidden tracking for edit mode -->
+          <input type="hidden" id="modal-edit-original-day" value="" />
+          <input type="hidden" id="modal-edit-original-slot" value="" />
+
+          <div class="form-group" style="margin-bottom:12px;">
+            <label for="modal-class-day">Day of Week</label>
+            <select id="modal-class-day" required>
+              <option value="Monday">Monday</option>
+              <option value="Tuesday">Tuesday</option>
+              <option value="Wednesday">Wednesday</option>
+              <option value="Thursday">Thursday</option>
+              <option value="Friday">Friday</option>
+              <option value="Saturday">Saturday</option>
+              <option value="Sunday">Sunday</option>
+            </select>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+            <div class="form-group">
+              <label for="modal-class-start">Start Time</label>
+              <input type="time" id="modal-class-start" value="08:30" required />
+            </div>
+            <div class="form-group">
+              <label for="modal-class-end">End Time</label>
+              <input type="time" id="modal-class-end" value="09:20" required />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:12px;">
+            <label for="modal-class-subject">Course Code / Subject Name</label>
+            <input type="text" id="modal-class-subject" placeholder="e.g. Data Structures (CSE205)" required />
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+            <div class="form-group">
+              <label for="modal-class-type">Type</label>
+              <select id="modal-class-type">
+                <option value="L">Lecture</option>
+                <option value="T">Tutorial</option>
+                <option value="P">Practical / Lab</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="modal-class-room">Room / Hall (Optional)</label>
+              <input type="text" id="modal-class-room" placeholder="e.g. 36-809" />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:var(--space-6);">
+            <label for="modal-class-batch">Batch / Section (Optional)</label>
+            <input type="text" id="modal-class-batch" placeholder="e.g. 323MB" />
+          </div>
+
+          <div class="modal-actions" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <button type="button" id="delete-class-btn" class="btn-terracotta btn-sm hidden" style="margin-right:auto;">
+              🗑️ Delete Class
+            </button>
+            <div style="display:flex; gap:8px; margin-left:auto;">
+              <button type="button" class="btn-secondary btn-sm" id="cancel-manual-class-btn">Cancel</button>
+              <button type="submit" id="save-class-modal-btn" class="btn-primary btn-sm">Add to Schedule</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+
+    <!-- ====================================================
+         MODAL: UPDATE / REPLACE WARNING
+    ==================================================== -->
+    <div id="update-warning-modal" class="modal-overlay hidden">
+      <div class="modal-box">
+        <div style="font-size:2.2rem; margin-bottom:var(--space-3);">⚠️</div>
+        <h2 style="font-size:1.4rem; margin-bottom:8px;">Clear Current Timetable?</h2>
+        <p style="font-size:0.9rem; margin-bottom:var(--space-4);">Your existing schedule will be removed from this group so you can import or build a new one.</p>
+        <div class="modal-actions">
+          <button id="cancel-update-btn" class="btn-secondary">Cancel</button>
+          <button id="confirm-update-btn" class="btn-terracotta">Yes, Clear Schedule</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MOBILE BOTTOM APP BAR (Future App Ready) ── -->
+    <nav class="mobile-app-bar hidden" id="mobile-app-bar">
+      <button class="mobile-tab-btn active" data-target="dashboard-view" title="Workspace">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect></svg>
+        <span>Workspace</span>
+      </button>
+      <button class="mobile-tab-btn" data-target="upload-view" title="Timetable">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <span>Timetable</span>
+      </button>
+      <button class="mobile-tab-btn" data-target="free-slots-view" title="Free Slots">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        <span>Free Slots</span>
+      </button>
+      <button class="mobile-tab-btn" data-target="find-view" title="Friends">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span>Friends</span>
+      </button>
+      <button class="mobile-tab-btn" data-target="groups-view" title="Squads">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        <span>Squads</span>
+      </button>
+    </nav>
+
+    <!-- ── TOAST NOTIFICATIONS (Doherty Threshold & Instant Feedback) ── -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Application Module Entry Point -->
+    <script type="module" src="./app.js?v=8"></script>
   </body>
 </html>

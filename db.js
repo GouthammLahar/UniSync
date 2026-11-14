@@ -1,7 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDocs, getDoc, updateDoc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
-import { firebaseConfig } from './config.js';
+import { firebaseConfig } from './config.js?v=8';
+import { checkStudentBusy, timeToMinutes } from './schedule-utils.js?v=8';
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -237,24 +238,45 @@ export async function searchGroupFriends(groupId, searchQuery) {
   return results;
 }
 
-export async function getGroupSquadStatus(groupId, day, time) {
+export async function getGroupSquadStatus(groupId, day, timeQuery) {
   const students = await getAllGroupStudents(groupId);
   const results = [];
-  
+
+  let qStart = 0;
+  let qEnd = null;
+
+  if (timeQuery && timeQuery.includes('-')) {
+    const [t1, t2] = timeQuery.split('-').map(s => s.trim());
+    qStart = timeToMinutes(t1);
+    qEnd = timeToMinutes(t2);
+  } else if (timeQuery) {
+    qStart = timeToMinutes(timeQuery);
+    qEnd = qStart + 1;
+  }
+
   students.forEach(student => {
-    let statusData = { status: "free" };
-    if (student.schedule && student.schedule[day] && student.schedule[day][time]) {
-      statusData = student.schedule[day][time];
+    const check = checkStudentBusy(student.schedule, day, qStart, qEnd);
+    if (check.isBusy) {
+      results.push({
+        name: student.name,
+        status: "In Class",
+        subject: check.class.subject || "Class",
+        room: check.class.room || "",
+        startTime: check.class.startTime,
+        endTime: check.class.endTime
+      });
+    } else {
+      results.push({
+        name: student.name,
+        status: "Free",
+        subject: "",
+        room: "",
+        startTime: null,
+        endTime: null
+      });
     }
-    
-    results.push({
-      name: student.name,
-      status: statusData.status === "free" ? "Free" : "In Class",
-      subject: statusData.subject || "",
-      room: statusData.room || ""
-    });
   });
-  
+
   return results.sort((a, b) => {
     if (a.status === "Free" && b.status !== "Free") return -1;
     if (a.status !== "Free" && b.status === "Free") return 1;

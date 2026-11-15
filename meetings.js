@@ -299,15 +299,15 @@ function _closeMeetingModal() {
 }
 
 function _resetMeetingModal() {
-  document.getElementById('meeting-title-input').value = '';
-  document.getElementById('meeting-desc-input').value = '';
-  document.getElementById('meeting-date-input').value = '';
-  document.getElementById('meeting-duration-select').value = '60';
-  document.getElementById('meeting-location-input').value = '';
-  document.getElementById('meeting-notes-input').value = '';
-  document.getElementById('meeting-type-select').value = 'group';
-  document.getElementById('meeting-slots-list').innerHTML = '';
-  document.getElementById('meeting-slots-day-select').value = 'Monday';
+  const byId = id => document.getElementById(id);
+  if (byId('meeting-title-input'))    byId('meeting-title-input').value = '';
+  if (byId('meeting-desc-input'))     byId('meeting-desc-input').value = '';
+  if (byId('meeting-duration-select')) byId('meeting-duration-select').value = '60';
+  if (byId('meeting-location-input')) byId('meeting-location-input').value = '';
+  if (byId('meeting-notes-input'))    byId('meeting-notes-input').value = '';
+  if (byId('meeting-type-select'))    byId('meeting-type-select').value = 'group';
+  if (byId('meeting-slots-list'))     byId('meeting-slots-list').innerHTML = '';
+  if (byId('meeting-slots-day-select')) byId('meeting-slots-day-select').value = 'Monday';
   _selectedSlot = null;
   _selectedParticipantUids = [];
   _renderParticipantSelector();

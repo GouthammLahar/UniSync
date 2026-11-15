@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./style.css?v=10">
+    <link rel="stylesheet" href="./style.css?v=11">
     <script type="importmap">
     {
       "imports": {
@@ -37,22 +37,23 @@
     <!-- ── GLOBAL NAVIGATION ──────────────────────────── -->
     <header class="site-nav" id="site-header">
       <div class="nav-container">
-        
-        <!-- Nav Left: Brand & Squad Pill -->
-        <div class="nav-brand-group">
+
+        <!-- ── LEFT: Brand + Squad Pill ── -->
+        <div class="nav-left">
           <a href="#" class="brand-block" id="nav-brand-link">
-            <img src="./logo.png" alt="UniSync Logo" class="brand-logo" width="34" height="34" />
+            <!-- Icon-only logo for compact nav -->
+            <img src="./logo-icon.svg" alt="UniSync" class="brand-logo-icon" width="32" height="32" />
             <span class="brand-name">UniSync</span>
           </a>
-          <!-- Squad Switcher Pill (Active when logged in with squads) -->
+          <!-- Squad Switcher Pill -->
           <div class="squad-selector-pill hidden" id="squad-pill-wrapper">
             <span class="squad-pulse-indicator"></span>
             <select id="group-switcher-select" class="group-pill-select" aria-label="Switch Campus Squad"></select>
-            <svg class="squad-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            <svg class="squad-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
           </div>
         </div>
 
-        <!-- Public Nav Links (Logged Out) -->
+        <!-- ── CENTER: Public Nav (Logged Out) ── -->
         <nav class="nav-links-wrap" id="public-nav-links">
           <a href="#features" class="nav-link">Features</a>
           <a href="#how-it-works" class="nav-link">How It Works</a>
@@ -64,7 +65,7 @@
           </button>
         </nav>
 
-        <!-- App Segmented Nav Rail (Logged In - Desktop) -->
+        <!-- ── CENTER: App Nav Rail (Logged In, Desktop) ── -->
         <nav class="app-segmented-nav hidden" id="app-nav-links">
           <button class="nav-link active" data-target="dashboard-view">Workspace</button>
           <button class="nav-link" data-target="upload-view">My Timetable</button>
@@ -75,55 +76,60 @@
           <button class="nav-link" data-target="meetings-view">Meetings</button>
         </nav>
 
-        <!-- Notification Bell (Logged In) -->
-        <div class="notif-bell-wrap hidden" id="notif-bell-wrap">
-          <button class="notif-bell-btn" id="notif-bell-btn" title="Notifications">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-            <span class="notif-badge hidden" id="notif-badge">0</span>
-          </button>
-          <div class="notif-dropdown hidden" id="notif-dropdown">
-            <div class="notif-dropdown-header">
-              <span>Notifications</span>
-              <button id="mark-all-read-btn" class="mark-all-read-btn">Mark all read</button>
-            </div>
-            <div id="notif-list" class="notif-list"></div>
-          </div>
-        </div>
+        <!-- ── RIGHT: Notification Bell + User Menu (Logged In) ── -->
+        <div class="nav-right hidden" id="nav-right-group">
 
-        <!-- Nav Right: User Account Menu (Logged In) -->
-        <div class="user-menu-wrap hidden" id="nav-user-menu-wrap">
-          <button class="user-menu-pill" id="user-menu-trigger" title="Account Menu">
-            <div class="user-avatar-circle" id="nav-user-avatar">U</div>
-            <span class="user-pill-name" id="nav-user-name">Student</span>
-            <svg class="chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
-          </button>
-
-          <!-- Dropdown Flyout -->
-          <div class="user-dropdown-panel hidden" id="user-dropdown-panel">
-            <div class="user-dropdown-header">
-              <strong id="user-dropdown-name">Student</strong>
-              <span id="user-dropdown-email">user@university.edu</span>
+          <!-- Notification Bell -->
+          <div class="notif-bell-wrap" id="notif-bell-wrap">
+            <button class="notif-bell-btn" id="notif-bell-btn" title="Notifications">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              <span class="notif-badge hidden" id="notif-badge">0</span>
+            </button>
+            <div class="notif-dropdown hidden" id="notif-dropdown">
+              <div class="notif-dropdown-header">
+                <span>Notifications</span>
+                <button id="mark-all-read-btn" class="mark-all-read-btn">Mark all read</button>
+              </div>
+              <div id="notif-list" class="notif-list"></div>
             </div>
-            <div class="dropdown-divider"></div>
-            <button class="dropdown-item dropdown-nav-btn" data-target="profile-view">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-              Profile &amp; Settings
-            </button>
-            <button class="dropdown-item dropdown-nav-btn" data-target="right-now-view">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              Right Now (Live Tracker)
-            </button>
-            <button class="dropdown-item dropdown-nav-btn" data-target="groups-view">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-              Manage Squads
-            </button>
-            <div class="dropdown-divider"></div>
-            <button class="dropdown-item dropdown-logout" id="logout-btn">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-              Sign Out
-            </button>
           </div>
-        </div>
+
+          <!-- User Account Menu -->
+          <div class="user-menu-wrap" id="nav-user-menu-wrap">
+            <button class="user-menu-pill" id="user-menu-trigger" title="Account Menu">
+              <div class="user-avatar-circle" id="nav-user-avatar">U</div>
+              <span class="user-pill-name" id="nav-user-name">Student</span>
+              <svg class="chevron-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+
+            <!-- Dropdown Flyout -->
+            <div class="user-dropdown-panel hidden" id="user-dropdown-panel">
+              <div class="user-dropdown-header">
+                <strong id="user-dropdown-name">Student</strong>
+                <span id="user-dropdown-email">user@university.edu</span>
+              </div>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item dropdown-nav-btn" data-target="profile-view">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                Profile &amp; Settings
+              </button>
+              <button class="dropdown-item dropdown-nav-btn" data-target="right-now-view">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Right Now (Live Tracker)
+              </button>
+              <button class="dropdown-item dropdown-nav-btn" data-target="groups-view">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Manage Squads
+              </button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item dropdown-logout" id="logout-btn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                Sign Out
+              </button>
+            </div>
+          </div>
+
+        </div><!-- /nav-right -->
 
       </div>
     </header>
@@ -470,7 +476,11 @@
         <footer class="site-footer">
           <div class="footer-top">
             <div class="footer-brand">
-              <h3>UniSync</h3>
+              <div class="footer-brand-mark">
+                <img src="./logo-icon.svg" alt="UniSync" width="28" height="28" style="display:inline-block;vertical-align:middle;margin-right:8px;" />
+                <h3 style="display:inline;vertical-align:middle;">UniSync</h3>
+              </div>
+              <p style="font-size:0.8rem;margin-top:4px;opacity:0.7;">One Campus. One Sync.</p>
               <p>Different schedules. Shared moments. The student availability and timetable collaboration platform for higher education.</p>
             </div>
             <div>
@@ -1240,6 +1250,6 @@
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Application Module Entry Point -->
-    <script type="module" src="./app.js?v=10"></script>
+    <script type="module" src="./app.js?v=11"></script>
   </body>
 </html>

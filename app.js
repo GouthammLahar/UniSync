@@ -184,6 +184,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (mobileAppBar) mobileAppBar.classList.remove('hidden');
       if (userMenuWrap) userMenuWrap.classList.remove('hidden');
 
+      // Show nav-right group (wraps bell + user menu)
+      const navRightGroup = document.getElementById('nav-right-group');
+      if (navRightGroup) navRightGroup.classList.remove('hidden');
+
       // Show notification bell
       const notifBellWrap = document.getElementById('notif-bell-wrap');
       if (notifBellWrap) notifBellWrap.classList.remove('hidden');
@@ -221,6 +225,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (userMenuWrap) userMenuWrap.classList.add('hidden');
       if (squadPillWrapper) squadPillWrapper.classList.add('hidden');
       groupSwitcher.classList.add('hidden');
+
+      // Hide nav-right group
+      const navRightGroup2 = document.getElementById('nav-right-group');
+      if (navRightGroup2) navRightGroup2.classList.add('hidden');
 
       // Hide notification bell and cleanup
       const notifBellWrap = document.getElementById('notif-bell-wrap');

@@ -159,78 +159,99 @@ p {
 
 /* ============================================
    3. GLOBAL SITE NAVIGATION (Dual State)
+   Three-section layout: Left | Center | Right
 ============================================ */
+
+/* ── Sticky Header Shell ── */
 .site-nav {
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: rgba(247, 245, 239, 0.95);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(247, 245, 239, 0.97);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
-  transition: var(--transition);
+  transition: box-shadow 0.2s ease;
+}
+.site-nav.scrolled {
+  box-shadow: 0 2px 12px rgba(32, 34, 31, 0.07);
 }
 
+/* ── Nav Container: 3-column flex (left | center | right) ── */
 .nav-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 var(--space-6);
+  padding: 0 24px;
   height: 68px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  gap: 0;
 }
 
-.nav-brand-group {
+/* ── LEFT: Brand + Squad Pill ── */
+.nav-left {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 12px;
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .brand-block {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   text-decoration: none;
   color: var(--ink);
   user-select: none;
   line-height: 1;
+  flex-shrink: 0;
 }
 
-.brand-logo {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid rgba(83, 107, 91, 0.2);
+/* SVG icon version for the navbar (compact, crisp) */
+.brand-logo-icon {
+  width: 32px;
+  height: 32px;
   display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+/* Keep legacy class working too */
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .brand-name {
   font-family: var(--font-serif);
-  font-size: 1.35rem;
+  font-size: 1.3rem;
   font-weight: 700;
-  color: var(--ink);
-  letter-spacing: -0.03em;
+  color: #123F30;
+  letter-spacing: -0.02em;
   line-height: 1;
+  white-space: nowrap;
 }
 
-/* Squad Switcher Pill (Clean, ample width, no awkward truncation) */
+/* Squad Switcher Pill */
 .squad-selector-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   background: var(--sage-light);
   border: 1px solid var(--sage-border);
-  padding: 0 28px 0 12px;
-  height: 36px;
-  box-sizing: border-box;
+  padding: 0 24px 0 10px;
+  height: 32px;
   border-radius: var(--r-pill);
   transition: var(--transition);
   position: relative;
-  max-width: 280px;
-  min-width: 140px;
+  max-width: 220px;
+  min-width: 110px;
+  box-sizing: border-box;
 }
 .squad-selector-pill:hover {
   background: var(--sage);
@@ -238,58 +259,114 @@ p {
 }
 
 .squad-pulse-indicator {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--forest);
-  box-shadow: 0 0 0 2px rgba(83, 107, 91, 0.25);
+  background: #19845D;
+  box-shadow: 0 0 0 2px rgba(25, 132, 93, 0.22);
   flex-shrink: 0;
+  animation: pulseGlow 2.4s ease-in-out infinite;
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(25, 132, 93, 0.22); }
+  50%       { box-shadow: 0 0 0 4px rgba(25, 132, 93, 0.12); }
 }
 
 .group-pill-select {
   background: transparent;
   border: none;
   outline: none;
-  color: var(--forest-dark);
+  color: #123F30;
   font-family: var(--font-sans);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
   padding-right: 4px;
-  max-width: 210px;
+  max-width: 160px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 34px;
+  line-height: 30px;
 }
 .squad-chevron {
   position: absolute;
-  right: 10px;
+  right: 8px;
   pointer-events: none;
   color: var(--forest);
 }
 
-/* Public Nav Links (Logged Out) */
+/* ── CENTER: Navigation Rail (auto-grows to fill space) ── */
+.app-segmented-nav {
+  display: flex;
+  align-items: center;
+  background: rgba(32, 34, 31, 0.045);
+  border: 1px solid rgba(32, 34, 31, 0.08);
+  border-radius: var(--r-pill);
+  padding: 4px;
+  gap: 1px;
+  flex: 1 1 auto;
+  margin: 0 20px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.app-segmented-nav .nav-link {
+  background: transparent;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-secondary);
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.2;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+.app-segmented-nav .nav-link:hover {
+  color: #123F30;
+  background: rgba(32, 34, 31, 0.05);
+}
+.app-segmented-nav .nav-link.active {
+  color: #123F30;
+  background: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(32, 34, 31, 0.1), 0 0 0 0.5px rgba(32,34,31,0.06);
+}
+
+/* Public Nav Links (logged-out state) */
 .nav-links-wrap {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: 4px;
+  flex: 1 1 auto;
+  justify-content: center;
 }
 .nav-links-wrap .nav-link {
-  font-size: 0.9rem;
+  background: transparent;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
   font-weight: 600;
   color: var(--ink-secondary);
   padding: 8px 14px;
   border-radius: var(--r-pill);
+  cursor: pointer;
   transition: var(--transition);
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
-  line-height: 1;
+  white-space: nowrap;
 }
 .nav-links-wrap .nav-link:hover {
-  color: var(--forest);
+  color: #123F30;
   background: rgba(83, 107, 91, 0.08);
 }
 
@@ -298,88 +375,62 @@ p {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: var(--forest);
+  background: #19845D;
   color: #fff !important;
   font-family: var(--font-sans);
-  font-size: 0.88rem;
+  font-size: 0.87rem;
   font-weight: 600;
-  height: 40px;
+  height: 38px;
   padding: 0 18px;
   border-radius: var(--r-pill);
-  border: 1.5px solid transparent;
+  border: none;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0 2px 6px rgba(83, 107, 91, 0.25);
-  box-sizing: border-box;
-  line-height: 1;
+  box-shadow: 0 2px 8px rgba(25, 132, 93, 0.3);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .nav-cta-btn:hover {
-  background: var(--forest-hover);
+  background: #123F30;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(83, 107, 91, 0.35);
+  box-shadow: 0 4px 14px rgba(25, 132, 93, 0.38);
 }
 
-/* App Segmented Nav Rail (Desktop) */
-.app-segmented-nav {
+/* ── RIGHT: Bell + User Menu ── */
+.nav-right {
   display: flex;
   align-items: center;
-  background: rgba(32, 34, 31, 0.04);
-  border: 1px solid var(--border);
-  border-radius: var(--r-pill);
-  padding: 4px;
-  gap: 2px;
+  gap: 6px;
+  flex: 0 0 auto;
 }
 
-.app-segmented-nav .nav-link {
-  background: transparent;
-  border: none;
-  font-family: var(--font-sans);
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--ink-secondary);
-  padding: 6px 14px;
-  border-radius: var(--r-pill);
-  cursor: pointer;
-  transition: var(--transition);
-  white-space: nowrap;
-}
-.app-segmented-nav .nav-link:hover {
-  color: var(--ink);
-  background: rgba(32, 34, 31, 0.04);
-}
-.app-segmented-nav .nav-link.active {
-  color: var(--forest-deep);
-  background: #ffffff;
-  font-weight: 700;
-  box-shadow: 0 1px 4px rgba(32, 34, 31, 0.08);
-}
-
-/* Public Nav Links (Logged out) */
-.nav-links-wrap {
+/* Notification Bell */
+.notif-bell-wrap {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
 }
 
-.nav-links-wrap .nav-link {
+.notif-bell-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   background: transparent;
   border: none;
-  font-family: var(--font-sans);
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--ink-secondary);
-  padding: 8px 14px;
-  border-radius: var(--r-pill);
   cursor: pointer;
-  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-secondary);
+  transition: background 0.15s ease, color 0.15s ease;
 }
-.nav-links-wrap .nav-link:hover {
-  color: var(--ink);
-  background: rgba(83, 107, 91, 0.08);
+.notif-bell-btn:hover {
+  background: rgba(83, 107, 91, 0.1);
+  color: #123F30;
 }
 
-/* Nav User Account Menu */
+/* User Account Menu */
 .user-menu-wrap {
   position: relative;
   display: flex;
@@ -389,47 +440,50 @@ p {
 .user-menu-pill {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   background: transparent;
   border: 1px solid transparent;
-  padding: 4px 10px 4px 4px;
+  padding: 3px 8px 3px 3px;
   border-radius: var(--r-pill);
   cursor: pointer;
   transition: var(--transition);
+  height: 38px;
 }
 .user-menu-pill:hover {
   background: rgba(83, 107, 91, 0.07);
-  border-color: rgba(83, 107, 91, 0.14);
+  border-color: rgba(83, 107, 91, 0.15);
 }
 
 .user-avatar-circle {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: var(--forest);
+  background: linear-gradient(135deg, #19845D, #123F30);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.85rem;
-  box-shadow: var(--shadow-xs);
+  font-size: 0.82rem;
   flex-shrink: 0;
+  letter-spacing: 0;
 }
 
 .user-pill-name {
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 700;
   color: var(--ink);
-  max-width: 110px;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1;
 }
 
 .chevron-icon {
   color: var(--ink-muted);
   transition: transform 0.2s ease;
+  flex-shrink: 0;
 }
 .user-menu-wrap.open .chevron-icon {
   transform: rotate(180deg);
@@ -2291,13 +2345,23 @@ input::placeholder {
   .final-cta-section { padding: var(--space-10) var(--space-5); margin: var(--space-8) var(--space-4); }
 }
 
+/* Medium screens: shrink nav items to avoid overflow */
+@media (max-width: 1100px) and (min-width: 821px) {
+  .nav-container { padding: 0 16px; }
+  .app-segmented-nav { margin: 0 10px; }
+  .app-segmented-nav .nav-link { padding: 6px 9px; font-size: 0.78rem; }
+  .squad-selector-pill { max-width: 160px; }
+  .user-pill-name { max-width: 72px; }
+  .brand-name { font-size: 1.15rem; }
+}
+
 @media (max-width: 820px) {
   /* Hide desktop segmented navigation rail on mobile */
   .app-segmented-nav { display: none !important; }
-  
+
   /* Show fixed bottom app navigation when logged in */
   .mobile-app-bar:not(.hidden) { display: flex; }
-  
+
   /* Safe padding so bottom bar does not cover content */
   .view:not(#landing-view) {
     padding: var(--space-5) var(--space-4) calc(var(--space-16) + 36px);
@@ -2305,26 +2369,31 @@ input::placeholder {
 
   .nav-container {
     height: 60px;
-    padding: 0 var(--space-4);
+    padding: 0 16px;
+    gap: 0;
   }
 
+  /* On mobile, nav-right loses its left margin (nav center is hidden) */
+  .nav-right { margin-left: auto; }
+  .nav-left  { flex: 0 0 auto; }
+
   .brand-name {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
   }
 
   .squad-selector-pill {
-    max-width: 170px;
-    height: 32px;
-    padding: 0 8px;
+    max-width: 150px;
+    height: 30px;
+    padding: 0 22px 0 8px;
   }
   .group-pill-select {
-    font-size: 0.78rem;
-    max-width: 120px;
-    line-height: 30px;
+    font-size: 0.76rem;
+    max-width: 110px;
+    line-height: 28px;
   }
 
   .user-pill-name {
-    display: none; /* Avatar circle only on mobile to save space */
+    display: none; /* Avatar circle only on mobile */
   }
 
   .dashboard-hero-banner {
@@ -2429,22 +2498,7 @@ input::placeholder {
   position: relative;
   display: flex;
   align-items: center;
-  margin-right: 6px;
 }
-.notif-bell-btn {
-  position: relative;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  color: var(--ink);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-}
-.notif-bell-btn:hover { background: rgba(83,107,91,0.1); }
 .notif-badge {
   position: absolute;
   top: 2px;

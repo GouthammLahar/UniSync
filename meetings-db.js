@@ -6,7 +6,7 @@
 import {
   getFirestore, collection, doc, addDoc, updateDoc, getDoc, getDocs,
   onSnapshot, serverTimestamp, query, where, orderBy, limit,
-  writeBatch, arrayContains
+  writeBatch
 } from 'firebase/firestore';
 import { getApp } from 'firebase/app';
 import { auth } from './db.js?v=9';

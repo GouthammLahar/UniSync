@@ -1,5 +1,5 @@
-import { geminiApiKey } from './config.js?v=9';
-import { normaliseTime, DAY_ORDER, TYPE_LABEL_MAP } from './schedule-utils.js?v=9';
+import { geminiApiKey } from './config.js?v=10';
+import { normaliseTime, DAY_ORDER, TYPE_LABEL_MAP } from './schedule-utils.js?v=10';
 
 /**
  * Scans a timetable image using Gemini Vision AI.

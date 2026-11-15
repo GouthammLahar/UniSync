@@ -9,7 +9,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { getApp } from 'firebase/app';
-import { auth } from './db.js?v=9';
+import { auth } from './db.js?v=10';
 
 // Reuse the already-initialized Firestore instance
 const db = getFirestore(getApp());

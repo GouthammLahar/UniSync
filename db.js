@@ -1,8 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDocs, getDoc, updateDoc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
-import { firebaseConfig } from './config.js?v=9';
-import { checkStudentBusy, timeToMinutes } from './schedule-utils.js?v=9';
+import { firebaseConfig } from './config.js?v=10';
+import { checkStudentBusy, timeToMinutes } from './schedule-utils.js?v=10';
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);

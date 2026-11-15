@@ -5,7 +5,7 @@
 
 import { getMessaging, getToken, onMessage, deleteToken } from 'firebase/messaging';
 import { getApp } from 'firebase/app';
-import { saveFCMToken, deleteFCMToken } from './meetings-db.js?v=9';
+import { saveFCMToken, deleteFCMToken } from './meetings-db.js?v=10';
 
 // VAPID key — set via Vercel env var injected at build time, or fallback
 // Replace YOUR_VAPID_KEY_HERE with the actual key from Firebase Console → Project Settings → Cloud Messaging

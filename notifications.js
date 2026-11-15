@@ -3,8 +3,8 @@
  * Handles real-time Firestore notification listening, bell badge, dropdown rendering.
  */
 
-import { listenToNotifications, markNotificationRead, markAllNotificationsRead } from './meetings-db.js?v=9';
-import { auth } from './db.js?v=9';
+import { listenToNotifications, markNotificationRead, markAllNotificationsRead } from './meetings-db.js?v=10';
+import { auth } from './db.js?v=10';
 
 let _unsubNotif = null;
 let _currentNotifs = [];

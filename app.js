@@ -4,9 +4,9 @@ import {
   regenerateGroupCode, deleteGroup, kickMember,
   getGroupProfile, updateGroupProfile, saveGroupSchedule, deleteGroupSchedule,
   getFriendSchedule, getAllGroupStudents, searchGroupFriends, getGroupSquadStatus, getGroupMemberCount
-} from './db.js?v=9';
-import { parseLpuExcel } from './timetable-parser.js?v=9';
-import { scanTimetableImage } from './api.js?v=9';
+} from './db.js?v=10';
+import { parseLpuExcel } from './timetable-parser.js?v=10';
+import { scanTimetableImage } from './api.js?v=10';
 import {
   normaliseTime,
   timeToMinutes,
@@ -16,9 +16,9 @@ import {
   findCommonFreeSlots,
   checkStudentBusy,
   DAY_ORDER
-} from './schedule-utils.js?v=9';
-import { initMeetingsModule, enterMeetingsView, cleanupMeetingsModule } from './meetings.js?v=9';
-import { initNotificationBell, cleanupNotificationBell } from './notifications.js?v=9';
+} from './schedule-utils.js?v=10';
+import { initMeetingsModule, enterMeetingsView, cleanupMeetingsModule } from './meetings.js?v=10';
+import { initNotificationBell, cleanupNotificationBell } from './notifications.js?v=10';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -887,38 +887,43 @@ document.addEventListener('DOMContentLoaded', () => {
   const manualClassForm     = document.getElementById('manual-class-form');
   const deleteClassBtn      = document.getElementById('delete-class-btn');
 
+  function _safeSet(id, prop, val) {
+    const el = document.getElementById(id);
+    if (el) el[prop] = val;
+  }
+
   function openClassModalForAdd(preselectedDay = 'Monday') {
     if (manualClassForm) manualClassForm.reset();
-    document.getElementById('modal-edit-original-day').value = '';
-    document.getElementById('modal-edit-original-slot').value = '';
-    document.getElementById('modal-badge-tag').innerText = 'NEW CLASS ENTRY';
-    document.getElementById('manual-modal-title').innerText = 'Add Class to Schedule';
-    document.getElementById('save-class-modal-btn').innerText = 'Add to Schedule';
+    _safeSet('modal-edit-original-day', 'value', '');
+    _safeSet('modal-edit-original-slot', 'value', '');
+    _safeSet('modal-badge-tag', 'innerText', 'NEW CLASS ENTRY');
+    _safeSet('manual-modal-title', 'innerText', 'Add Class to Schedule');
+    _safeSet('save-class-modal-btn', 'innerText', 'Add to Schedule');
     if (deleteClassBtn) deleteClassBtn.classList.add('hidden');
-    document.getElementById('modal-class-day').value = preselectedDay;
-    document.getElementById('modal-class-start').value = '08:30';
-    document.getElementById('modal-class-end').value = '09:20';
-    manualClassModal.classList.remove('hidden');
+    _safeSet('modal-class-day', 'value', preselectedDay);
+    _safeSet('modal-class-start', 'value', '08:30');
+    _safeSet('modal-class-end', 'value', '09:20');
+    if (manualClassModal) manualClassModal.classList.remove('hidden');
   }
 
   function openClassModalForEdit(day, slotKey, data) {
-    document.getElementById('modal-edit-original-day').value = day;
-    document.getElementById('modal-edit-original-slot').value = slotKey;
-    document.getElementById('modal-badge-tag').innerText = 'EDIT CLASS DETAILS';
-    document.getElementById('manual-modal-title').innerText = 'Edit Class';
-    document.getElementById('save-class-modal-btn').innerText = 'Save Changes';
+    _safeSet('modal-edit-original-day', 'value', day);
+    _safeSet('modal-edit-original-slot', 'value', slotKey);
+    _safeSet('modal-badge-tag', 'innerText', 'EDIT CLASS DETAILS');
+    _safeSet('manual-modal-title', 'innerText', 'Edit Class');
+    _safeSet('save-class-modal-btn', 'innerText', 'Save Changes');
     if (deleteClassBtn) deleteClassBtn.classList.remove('hidden');
 
-    document.getElementById('modal-class-day').value = day;
+    _safeSet('modal-class-day', 'value', day);
     const [startT, endT] = slotKey.split(' - ');
-    document.getElementById('modal-class-start').value = normaliseTime(data.startTime || startT);
-    document.getElementById('modal-class-end').value = normaliseTime(data.endTime || endT);
-    document.getElementById('modal-class-subject').value = data.subject || '';
-    document.getElementById('modal-class-type').value = data.type || 'L';
-    document.getElementById('modal-class-room').value = data.room || '';
-    document.getElementById('modal-class-batch').value = data.batch || '';
+    _safeSet('modal-class-start', 'value', normaliseTime(data.startTime || startT));
+    _safeSet('modal-class-end', 'value', normaliseTime(data.endTime || endT));
+    _safeSet('modal-class-subject', 'value', data.subject || '');
+    _safeSet('modal-class-type', 'value', data.type || 'L');
+    _safeSet('modal-class-room', 'value', data.room || '');
+    _safeSet('modal-class-batch', 'value', data.batch || '');
 
-    manualClassModal.classList.remove('hidden');
+    if (manualClassModal) manualClassModal.classList.remove('hidden');
   }
 
   if (openManualModalBtn) {

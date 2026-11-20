@@ -47,11 +47,15 @@ export function getAdminMessaging() {
  * @returns {Object} decodedToken with uid
  */
 export async function verifyToken(req) {
-  const { getAuth } = await import('firebase-admin/auth');
-  getAdminApp();
   const authHeader = req.headers.authorization || req.headers.Authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) throw new Error('No authorization token provided');
+  if (!token) {
+    const err = new Error('No authorization token provided');
+    err.code = 'NO_TOKEN';
+    throw err;
+  }
+  const { getAuth } = await import('firebase-admin/auth');
+  getAdminApp();
   return getAuth().verifyIdToken(token);
 }
 

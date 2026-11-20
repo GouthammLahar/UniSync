@@ -2,3 +2,14 @@ node_modules/
 dist/
 .env
 .vscode/
+
+# Firebase service account JSON files and private keys
+*firebase-adminsdk*.json
+serviceAccountKey*.json
+*.pem
+
+# Local environment files
+.env*.local
+
+# macOS system files
+.DS_Store

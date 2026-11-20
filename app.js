@@ -18,6 +18,7 @@ import {
 } from './schedule-utils.js?v=10';
 import { initMeetingsModule, enterMeetingsView, cleanupMeetingsModule } from './meetings.js?v=10';
 import { initNotificationBell, cleanupNotificationBell } from './notifications.js?v=10';
+import { initAssistant, toggleAssistantFab, closeAssistantDrawer } from './assistant.js?v=11';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -202,6 +203,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Init notification bell
         initNotificationBell(u.uid, switchView);
 
+        // Init assistant
+        initAssistant({
+          getActiveGroupId: () => activeGroupId
+        });
+        toggleAssistantFab(true);
+
         // Init meetings module with injected dependencies
         initMeetingsModule({
           getAllGroupStudents: (gid) => getAllGroupStudents(gid),
@@ -234,6 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (notifBellWrap) notifBellWrap.classList.add('hidden');
       cleanupNotificationBell();
       cleanupMeetingsModule();
+      toggleAssistantFab(false);
+      closeAssistantDrawer();
 
       switchView('landing-view');
       activeGroupId = null;

@@ -19,6 +19,7 @@ import {
 import { initMeetingsModule, enterMeetingsView, cleanupMeetingsModule } from './meetings.js?v=10';
 import { initNotificationBell, cleanupNotificationBell } from './notifications.js?v=10';
 import { initAssistant, toggleAssistantFab, closeAssistantDrawer } from './assistant.js?v=11';
+import { initSquadChat, switchSquadSubtab, openSquadChat, closeSquadChatListener } from './squad-chat.js?v=10';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -98,6 +99,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (targetId === 'groups-view')     renderGroupsDashboard();
     if (targetId === 'right-now-view')  renderLiveTracker();
     if (targetId === 'meetings-view')   enterMeetingsView();
+    if (targetId === 'squad-view') {
+      const chatPane = document.getElementById('squad-chat-pane');
+      if (chatPane && !chatPane.classList.contains('hidden')) {
+        openSquadChat(activeGroupId);
+      }
+    } else {
+      // Unsubscribe from real-time squad chat when leaving squad-view to preserve free-tier quota
+      closeSquadChatListener();
+    }
   }
   window.switchView = switchView;
 
@@ -216,6 +226,12 @@ document.addEventListener('DOMContentLoaded', () => {
           getActiveGroupMeta: () => activeGroupMeta,
           showToast:          (msg, type) => showToast(msg, type)
         });
+
+        // Init squad chat module
+        initSquadChat({
+          getActiveGroupId:   () => activeGroupId,
+          getActiveGroupMeta: () => activeGroupMeta
+        });
       }
 
       try {
@@ -243,6 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
       cleanupMeetingsModule();
       toggleAssistantFab(false);
       closeAssistantDrawer();
+      closeSquadChatListener();
 
       switchView('landing-view');
       activeGroupId = null;
@@ -1668,6 +1685,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <div style="display:flex; flex-direction:column; gap:8px; margin-top:auto;">
+          <button class="btn-primary btn-sm dashboard-chat-btn" data-id="${group.id}">💬 Squad Chat</button>
           ${isAdmin ? `
             <button class="btn-secondary btn-sm manage-members-btn" data-id="${group.id}">👥 Manage Members</button>
             <button class="btn-secondary btn-sm dashboard-delete-btn" data-id="${group.id}" style="color:var(--terracotta); border-color:var(--terracotta);">Delete Squad</button>
@@ -1681,7 +1699,18 @@ document.addEventListener('DOMContentLoaded', () => {
       grid.appendChild(card);
     }
 
-    // Attach leave / delete / manage listeners
+    // Attach leave / delete / manage / chat listeners
+    document.querySelectorAll('.dashboard-chat-btn').forEach(b => {
+      b.addEventListener('click', async (e) => {
+        const gid = e.currentTarget.getAttribute('data-id');
+        if (gid) {
+          await applyGroupContext(gid);
+          switchView('squad-view');
+          switchSquadSubtab('chat');
+        }
+      });
+    });
+
     document.querySelectorAll('.dashboard-delete-btn').forEach(b => {
       b.addEventListener('click', async (e) => {
         if (confirm('DANGER! This deletes the entire squad for all members. Are you sure?')) {

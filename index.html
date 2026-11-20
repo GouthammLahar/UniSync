@@ -751,68 +751,128 @@
 
 
       <!-- ====================================================
-           VIEW 4: SQUAD OVERVIEW
+           VIEW 4: SQUAD OVERVIEW & SQUAD CHAT
       ==================================================== -->
       <section id="squad-view" class="view">
         <div class="page-header">
           <h1>Squad Overview</h1>
-          <p>Check your entire squad's status across any day and period of the week.</p>
+          <p>Check your entire squad's status and chat with your squadmates in real time.</p>
         </div>
 
-        <div class="card">
-          <div class="filter-bar">
-            <div class="form-group">
-              <label for="day-select">Day</label>
-              <select id="day-select">
-                <option value="Monday">Monday</option>
-                <option value="Tuesday">Tuesday</option>
-                <option value="Wednesday">Wednesday</option>
-                <option value="Thursday">Thursday</option>
-                <option value="Friday">Friday</option>
-                <option value="Saturday">Saturday</option>
-                <option value="Sunday">Sunday</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="time-select">Time</label>
-              <select id="time-select">
-                <option value="08:00">08:00 AM</option>
-                <option value="08:20">08:20 AM</option>
-                <option value="08:30" selected>08:30 AM</option>
-                <option value="09:00">09:00 AM</option>
-                <option value="09:30">09:30 AM</option>
-                <option value="10:00">10:00 AM</option>
-                <option value="10:20">10:20 AM</option>
-                <option value="10:30">10:30 AM</option>
-                <option value="11:00">11:00 AM</option>
-                <option value="11:10">11:10 AM</option>
-                <option value="11:30">11:30 AM</option>
-                <option value="12:00">12:00 PM</option>
-                <option value="12:30">12:30 PM</option>
-                <option value="12:50">12:50 PM</option>
-                <option value="13:00">01:00 PM</option>
-                <option value="13:30">01:30 PM</option>
-                <option value="13:40">01:40 PM</option>
-                <option value="14:00">02:00 PM</option>
-                <option value="14:30">02:30 PM</option>
-                <option value="15:00">03:00 PM</option>
-                <option value="15:20">03:20 PM</option>
-                <option value="15:30">03:30 PM</option>
-                <option value="16:00">04:00 PM</option>
-                <option value="16:30">04:30 PM</option>
-                <option value="17:00">05:00 PM</option>
-                <option value="18:00">06:00 PM</option>
-                <option value="custom">Custom Time…</option>
-              </select>
-              <input type="time" id="squad-custom-time" class="hidden" style="margin-top:6px;" />
-            </div>
-            <button id="check-squad-btn" class="btn-primary" style="height:44px; margin-bottom:1px;">Check Squad</button>
-          </div>
+        <!-- Squad Subtabs (Status vs Chat) -->
+        <div class="squad-tabs-bar">
+          <button id="squad-subtab-status-btn" class="squad-subtab-btn active" type="button">
+            👥 Squad Status
+          </button>
+          <button id="squad-subtab-chat-btn" class="squad-subtab-btn" type="button">
+            💬 Squad Chat
+          </button>
+        </div>
 
-          <div id="squad-results">
-            <div class="empty-state" style="text-align:center; padding:2.5rem 1rem; color:var(--ink-muted);">
-              Select a day and time to check your squad's status.
+        <!-- PANE 1: SQUAD STATUS (LIVE AVAILABILITY) -->
+        <div id="squad-status-pane">
+          <div class="card">
+            <div class="filter-bar">
+              <div class="form-group">
+                <label for="day-select">Day</label>
+                <select id="day-select">
+                  <option value="Monday">Monday</option>
+                  <option value="Tuesday">Tuesday</option>
+                  <option value="Wednesday">Wednesday</option>
+                  <option value="Thursday">Thursday</option>
+                  <option value="Friday">Friday</option>
+                  <option value="Saturday">Saturday</option>
+                  <option value="Sunday">Sunday</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="time-select">Time</label>
+                <select id="time-select">
+                  <option value="08:00">08:00 AM</option>
+                  <option value="08:20">08:20 AM</option>
+                  <option value="08:30" selected>08:30 AM</option>
+                  <option value="09:00">09:00 AM</option>
+                  <option value="09:30">09:30 AM</option>
+                  <option value="10:00">10:00 AM</option>
+                  <option value="10:20">10:20 AM</option>
+                  <option value="10:30">10:30 AM</option>
+                  <option value="11:00">11:00 AM</option>
+                  <option value="11:10">11:10 AM</option>
+                  <option value="11:30">11:30 AM</option>
+                  <option value="12:00">12:00 PM</option>
+                  <option value="12:30">12:30 PM</option>
+                  <option value="12:50">12:50 PM</option>
+                  <option value="13:00">01:00 PM</option>
+                  <option value="13:30">01:30 PM</option>
+                  <option value="13:40">01:40 PM</option>
+                  <option value="14:00">02:00 PM</option>
+                  <option value="14:30">02:30 PM</option>
+                  <option value="15:00">03:00 PM</option>
+                  <option value="15:20">03:20 PM</option>
+                  <option value="15:30">03:30 PM</option>
+                  <option value="16:00">04:00 PM</option>
+                  <option value="16:30">04:30 PM</option>
+                  <option value="17:00">05:00 PM</option>
+                  <option value="18:00">06:00 PM</option>
+                  <option value="custom">Custom Time…</option>
+                </select>
+                <input type="time" id="squad-custom-time" class="hidden" style="margin-top:6px;" />
+              </div>
+              <button id="check-squad-btn" class="btn-primary" style="height:44px; margin-bottom:1px;">Check Squad</button>
             </div>
+
+            <div id="squad-results">
+              <div class="empty-state" style="text-align:center; padding:2.5rem 1rem; color:var(--ink-muted);">
+                Select a day and time to check your squad's status.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 2: SQUAD CHAT (TEXT-ONLY REAL-TIME CONVERSATION) -->
+        <div id="squad-chat-pane" class="hidden">
+          <div class="card squad-chat-card">
+            <div class="squad-chat-header">
+              <div>
+                <h3 id="squad-chat-header-title" style="font-size:1.15rem; margin-bottom:2px;">Squad Chat</h3>
+                <span class="squad-chat-header-sub">Live real-time messaging with verified squad members</span>
+              </div>
+            </div>
+
+            <div id="squad-chat-messages" class="squad-chat-messages">
+              <div class="squad-chat-placeholder">
+                <div class="squad-chat-spinner"></div>
+                <span>Loading conversation…</span>
+              </div>
+            </div>
+
+            <form id="squad-chat-form" class="squad-chat-form">
+              <div class="squad-chat-input-box">
+                <textarea
+                  id="squad-chat-input"
+                  class="squad-chat-textarea"
+                  placeholder="Type a message to your squad… (Enter to send, Shift+Enter for newline)"
+                  rows="1"
+                  maxlength="500"
+                ></textarea>
+                <button
+                  type="submit"
+                  id="squad-chat-send-btn"
+                  class="squad-chat-send-btn"
+                  title="Send message"
+                  disabled
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                </button>
+              </div>
+              <div class="squad-chat-footer">
+                <span id="squad-chat-counter" class="squad-chat-counter">0/500</span>
+                <span class="squad-chat-security-tag">🔒 Isolated to active squad members</span>
+              </div>
+            </form>
           </div>
         </div>
       </section>

@@ -44,6 +44,23 @@ service cloud.firestore {
                      exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
       }
       
+      // SUBCOLLECTION: Messages (Squad Chat)
+      match /messages/{messageId} {
+        // You can read squad messages ONLY if you are an active member of this group
+        allow read: if request.auth != null && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+
+        // You can send a message ONLY if you are an active member, no impersonation, max 500 chars
+        allow create: if request.auth != null &&
+                         exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)) &&
+                         request.resource.data.senderId == request.auth.uid &&
+                         request.resource.data.message is string &&
+                         request.resource.data.message.size() >= 1 &&
+                         request.resource.data.message.size() <= 500 &&
+                         request.resource.data.keys().hasOnly(['senderId', 'senderName', 'message', 'createdAt']);
+
+        // Messages are immutable — no client-side editing or deletion
+        allow update, delete: if false;
+      }
     }
 
     // MEETINGS COLLECTION

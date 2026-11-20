@@ -44,7 +44,7 @@ UniSync solves this by converting class schedules into normalized time intervals
 
 ### 2. Schedule Convergence & Common Free Slots Engine
 * Computes mutual free windows among selected squad members or the entire squad.
-* Supports **Day-wise Filtering** and **Duration Thresholds** (e.g., find slots $\ge 60$ minutes).
+* Supports **Day-wise Filtering** and **Duration Thresholds** (filtering shared periods $\ge 60$ minutes).
 * Displays exact starting/ending times along with member availability badges.
 
 ### 3. "Right Now" Live Campus Tracker
@@ -181,7 +181,7 @@ flowchart TD
 
 ## 📂 Project Folder Structure
 
-```
+```tree
 Unisync/
 ├── api/                           # Vercel Serverless Functions (Node.js)
 │   ├── _utils/
@@ -240,35 +240,38 @@ Unisync/
 * **npm**: v9.0.0 or higher
 * A modern browser with ES module support
 
-### 1. Clone Repository
+### Step 1: Clone Repository
 ```bash
 git clone https://github.com/GouthammLahar/UniSync.git
 cd UniSync
 ```
 
-### 2. Install Dependencies
+### Step 2: Install Dependencies
 ```bash
 npm install
 ```
 
-### 3. Configure Environment Variables
+### Step 3: Configure Environment Variables
 Copy the example environment configuration:
 ```bash
 cp .env.example .env.local
 ```
-Fill in the serverless configuration keys in `.env.local` (see [Firebase Configuration & Environment Variables](#-firebase-configuration--environment-variables)).
 
-### 4. Run Local Development Server
+Populate the required keys in `.env.local` for local serverless execution (refer to the [Firebase Configuration & Environment Variables](#-firebase-configuration--environment-variables) section below).
+
+### Step 4: Run Local Development Server
 ```bash
 npm run dev
 ```
+
 The application will be accessible at `http://localhost:5173`.
 
-### 5. Build for Production
+### Step 5: Build for Production
 To compile the client bundle and verify production assets:
 ```bash
 npm run build
 ```
+
 Production assets are generated in `dist/`. Test the build locally with:
 ```bash
 npm run preview
@@ -312,9 +315,9 @@ UniSync is configured for automated continuous deployment via **Vercel**.
    * `/api/notifications/register-token`
 3. **Daily Scheduled Cron**: Defined in `vercel.json`, Vercel invokes `/api/reminders/cron` daily at `07:00 UTC` (`0 7 * * *`) to process scheduled morning reminders.
 4. **Security Rules Deployment**: Deploy Firestore security rules using the Firebase CLI:
-   ```bash
-   firebase deploy --only firestore:rules
-   ```
+```bash
+firebase deploy --only firestore:rules
+```
 
 ---
 

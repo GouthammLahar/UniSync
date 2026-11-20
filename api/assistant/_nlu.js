@@ -9,6 +9,8 @@ import { DAY_ORDER } from './_logic.js';
 
 export const ALLOWED_INTENTS = [
   'GREETING',
+  'ACADEMIC_ATTENDANCE_QUERY',
+  'PRODUCTIVITY_AND_BALANCE',
   'GET_TODAY_SCHEDULE',
   'GET_TOMORROW_SCHEDULE',
   'GET_DATE_SCHEDULE',
@@ -30,8 +32,8 @@ export const ALLOWED_INTENTS = [
 export function matchDeterministicIntent(queryText, context = {}) {
   const q = (queryText || '').toLowerCase().trim();
 
-  // Greetings
-  if (/^(hi|hello|hey|heyy+|greetings|good (morning|afternoon|evening)|howdy|sup)\b/i.test(q)) {
+  // 1. Pure standalone greetings (do NOT match if followed by a substantive question)
+  if (/^(hi|hello|hey|heyy+|greetings|good (morning|afternoon|evening)|howdy|sup|how are you|hello, how are you|hi how are you)([ ,!.]+(there|assistant|bot|unisync)?)?[.!?]*$/i.test(q)) {
     return {
       intent: 'GREETING',
       confidence: 'deterministic',
@@ -39,7 +41,29 @@ export function matchDeterministicIntent(queryText, context = {}) {
     };
   }
 
-  // Help queries
+  // 2. Direct Academic & Attendance Queries
+  if (/(attendance|attendance percentage|my attendance|academic performance|marks|grades|cgpa|gpa|exam results?)/i.test(q)) {
+    return {
+      intent: 'ACADEMIC_ATTENDANCE_QUERY',
+      confidence: 'deterministic',
+      parameters: {
+        asksAttendance: /attendance/i.test(q),
+        asksPerformance: /(performance|marks|grades|cgpa|gpa|exam)/i.test(q),
+        asksStruggle: /(struggle|difficult|hard|fail)/i.test(q)
+      }
+    };
+  }
+
+  // 3. Direct Productivity, Balance & Routine queries
+  if (/(improve (my )?(weekly )?routine|balance (work|study|academic)|spend time with friends without affecting|suggest a plan|plan my week|when can i relax|manage my academic work)/i.test(q)) {
+    return {
+      intent: 'PRODUCTIVITY_AND_BALANCE',
+      confidence: 'deterministic',
+      parameters: {}
+    };
+  }
+
+  // 4. Help queries
   if (q === 'help' || q.includes('how to use unisync') || q.includes('how do i') || q.includes('help me')) {
     return {
       intent: 'GENERAL_UNISYNC_HELP',
@@ -48,8 +72,8 @@ export function matchDeterministicIntent(queryText, context = {}) {
     };
   }
 
-  // Today's classes
-  if (/^(what('s| is| are)? (my|today'?s) (classes|schedule|lectures)|my classes today|schedule today|today'?s classes|what do i have today)/i.test(q)) {
+  // 5. Today's classes
+  if (/^(what('s| is| are)? (my|today'?s) (classes|schedule|lectures)|my classes today|schedule today|today'?s classes|what do i have today)[.!?]?$/i.test(q)) {
     return {
       intent: 'GET_TODAY_SCHEDULE',
       confidence: 'deterministic',
@@ -57,8 +81,8 @@ export function matchDeterministicIntent(queryText, context = {}) {
     };
   }
 
-  // Tomorrow's classes
-  if (/^(what('s| is| are)? (my|tomorrow'?s) (classes|schedule|lectures)|my classes tomorrow|classes tomorrow|schedule tomorrow|what do i have tomorrow)/i.test(q)) {
+  // 6. Tomorrow's classes
+  if (/^(what('s| is| are)? (my|tomorrow'?s) (classes|schedule|lectures)|my classes tomorrow|classes tomorrow|schedule tomorrow|what do i have tomorrow)[.!?]?$/i.test(q)) {
     return {
       intent: 'GET_TOMORROW_SCHEDULE',
       confidence: 'deterministic',
@@ -66,10 +90,10 @@ export function matchDeterministicIntent(queryText, context = {}) {
     };
   }
 
-  // Specific Day Schedule
+  // 7. Specific Day Schedule
   for (const day of DAY_ORDER) {
     const dayRegex = new RegExp(`\\b(on |for )?${day}\\b`, 'i');
-    if (dayRegex.test(q) && /(class|schedule|lecture|timetable)/i.test(q) && !/(free|available|open)/i.test(q)) {
+    if (dayRegex.test(q) && /(class|schedule|lecture|timetable)/i.test(q) && !/(free|available|open|busy|light|relax|balance)/i.test(q)) {
       return {
         intent: 'GET_DATE_SCHEDULE',
         confidence: 'deterministic',
@@ -78,7 +102,7 @@ export function matchDeterministicIntent(queryText, context = {}) {
     }
   }
 
-  // Busiest / Lightest day
+  // 8. Busiest / Lightest day
   if (/(busiest|heaviest|most classes)/i.test(q)) {
     return {
       intent: 'GET_BUSY_DAY',
@@ -94,8 +118,8 @@ export function matchDeterministicIntent(queryText, context = {}) {
     };
   }
 
-  // Weekly insights / hours
-  if (/(weekly insights|how many (class )?hours|total classes this week|weekly breakdown|weekly schedule)/i.test(q) && !/(squad|meet)/i.test(q)) {
+  // 9. Weekly insights / hours
+  if (/^(weekly insights|how many (class )?hours|total classes this week|weekly breakdown|weekly schedule)[.!?]?$/i.test(q) && !/(squad|meet|relax|friend|balance)/i.test(q)) {
     return {
       intent: 'GET_WEEKLY_SCHEDULE_INSIGHTS',
       confidence: 'deterministic',
@@ -103,7 +127,7 @@ export function matchDeterministicIntent(queryText, context = {}) {
     };
   }
 
-  // Longest free slot
+  // 10. Longest free slot
   if (/(longest free (period|slot|time|window)|biggest gap)/i.test(q)) {
     return {
       intent: 'GET_LONGEST_FREE_SLOT',
@@ -112,7 +136,7 @@ export function matchDeterministicIntent(queryText, context = {}) {
     };
   }
 
-  // When can squad meet / common free time
+  // 11. When can squad meet / common free time
   if (/(when can (my |our )?squad meet|common free time|squad availability|when are (we|most of us|friends) free)/i.test(q)) {
     return {
       intent: 'FIND_COMMON_SQUAD_AVAILABILITY',
@@ -121,7 +145,7 @@ export function matchDeterministicIntent(queryText, context = {}) {
     };
   }
 
-  // Meeting suggestions
+  // 12. Meeting suggestions
   if (/(suggest (meeting |a )?time|propose (a )?meeting|meeting options|when should we meet)/i.test(q)) {
     return {
       intent: 'SUGGEST_MEETING_TIMES',
@@ -130,8 +154,8 @@ export function matchDeterministicIntent(queryText, context = {}) {
     };
   }
 
-  // Personal availability: free tomorrow, free today, when am i free
-  if (/(when am i free|my free (time|slots|periods)|am i free)/i.test(q)) {
+  // 13. Personal availability
+  if (/^(when am i free|my free (time|slots|periods)|am i free)/i.test(q) && !/(squad|friend|relax|balance|routine)/i.test(q)) {
     let day = extractDay(q);
     if (!day) {
       if (q.includes('tomorrow')) day = context.tomorrowDayName;
@@ -181,19 +205,21 @@ export async function extractIntentWithGemini(userText, context, apiKey) {
 Current date reference: ${dateStr} (${dayName}). User timezone: ${context.userTimezone || 'Asia/Kolkata'}.
 
 Given the student's question and optional recent turn, classify into EXACTLY ONE intent from this list:
-- GREETING: Greetings or casual hellos (e.g. "hi", "hello", "hey there").
-- GET_TODAY_SCHEDULE: Classes or timetable for today.
-- GET_TOMORROW_SCHEDULE: Classes or timetable for tomorrow.
-- GET_DATE_SCHEDULE: Classes or timetable for a specific day/date (e.g. "my schedule on Friday", "classes on Nov 25").
-- FIND_PERSONAL_AVAILABILITY: When the student is free, gaps between classes, free time on a day.
-- FIND_COMMON_SQUAD_AVAILABILITY: Finding free time when squad members / friends are mutually free.
-- GET_WEEKLY_SCHEDULE_INSIGHTS: Total class hours, weekly schedule overview, class distribution across the week.
-- GET_BUSY_DAY: Finding the student's busiest or heaviest class day.
+- GREETING: Polite greetings or conversational openers without complex requests (e.g. "hi", "hello", "how are you?").
+- ACADEMIC_ATTENDANCE_QUERY: Questions asking about student attendance records, attendance percentage, grades, marks, GPA, academic performance, exam results, or struggling in courses.
+- PRODUCTIVITY_AND_BALANCE: Questions seeking advice on balancing academic workload with social life or relaxation, managing busy weeks, planning weekly routines, or time management.
+- GET_TODAY_SCHEDULE: Specifically asking for today's classes or schedule.
+- GET_TOMORROW_SCHEDULE: Specifically asking for tomorrow's classes or schedule.
+- GET_DATE_SCHEDULE: Asking for classes or timetable on a specific day or date (e.g. "my schedule on Friday", "classes on Nov 25").
+- FIND_PERSONAL_AVAILABILITY: Asking when the student personally has free periods, gaps, or available hours on a specific day.
+- FIND_COMMON_SQUAD_AVAILABILITY: Finding mutual free slots when squad members or friends are simultaneously out of class.
+- GET_WEEKLY_SCHEDULE_INSIGHTS: Inquiring about total class hours across the week, weekly schedule overview, or general timetable statistics.
+- GET_BUSY_DAY: Finding the student's heaviest or busiest academic class day.
 - GET_LIGHTEST_DAY: Finding the student's lightest or easiest class day.
-- GET_LONGEST_FREE_SLOT: Finding the single longest break or gap between classes.
-- SUGGEST_MEETING_TIMES: Suggesting potential meeting slots for friends or squad.
-- GENERAL_UNISYNC_HELP: Questions on how to use UniSync (squads, excel import, meetings, etc).
-- UNKNOWN_INTENT: Questions completely unrelated to university scheduling or incomprehensible.
+- GET_LONGEST_FREE_SLOT: Finding the single longest break or gap between classes in the timetable.
+- SUGGEST_MEETING_TIMES: Requesting recommended meeting slots for friends or squad.
+- GENERAL_UNISYNC_HELP: Questions on using UniSync features (Excel timetable import, squads, meetings, privacy).
+- UNKNOWN_INTENT: Questions completely unrelated to university life, academics, or campus scheduling.
 
 Rules:
 1. Output ONLY a valid JSON object matching the schema.
@@ -290,35 +316,53 @@ export function matchFallbackIntent(queryText, context = {}) {
   const direct = matchDeterministicIntent(queryText, context);
   if (direct) return direct;
 
-  // 2. Keyword heuristic breakdown
-  const hasFree = /(free|availability|available|spare time|open slot|window|break|gap|go out|hang out|clear)/i.test(q);
-  const hasClass = /(class|lecture|subject|timetable|period|schedule)/i.test(q);
-  const hasSquad = /(squad|group|friends?|members?|together|everyone|we|us|roommates?)/i.test(q);
-  const hasMeet = /(meet|meeting|hangout|study session|catch up)/i.test(q);
-
-  let targetDay = extractDay(q);
-  if (!targetDay) {
-    if (q.includes('tomorrow')) targetDay = context.tomorrowDayName;
-    else if (q.includes('today')) targetDay = context.currentDayName;
+  // 2. Attendance & Academic Performance check (Phase 4)
+  if (/(attendance|percentage|academic performance|performance|grade|marks|cgpa|gpa|exam results?|struggle|struggling|fail|most likely to struggle)/i.test(q)) {
+    return {
+      intent: 'ACADEMIC_ATTENDANCE_QUERY',
+      confidence: 'fallback',
+      parameters: {
+        asksAttendance: /attendance/i.test(q),
+        asksPerformance: /(performance|marks|grades|cgpa|gpa|exam)/i.test(q),
+        asksStruggle: /(struggle|difficult|hard)/i.test(q)
+      }
+    };
   }
 
-  if (hasMeet) {
+  // 3. Balance, Relaxation, Productivity, Routine check (Phase 2 & 3)
+  if (/(relax|balance|routine|productivity|hang out with friends|spend time with friends|socialize|study plan|manage.*academic|manage.*study|busy week|suggest a plan)/i.test(q)) {
+    return {
+      intent: 'PRODUCTIVITY_AND_BALANCE',
+      confidence: 'fallback',
+      parameters: {}
+    };
+  }
+
+  // 4. Meeting suggestions
+  if (/(meet|meeting|study session|catch up)/i.test(q)) {
     return {
       intent: 'SUGGEST_MEETING_TIMES',
       confidence: 'fallback',
-      parameters: { day: targetDay || context.currentDayName }
+      parameters: { day: extractDay(q) || context.currentDayName }
     };
   }
 
-  if (hasSquad && hasFree) {
+  // 5. Squad availability
+  if (/(squad|group|friends?|together|everyone|we|us)/i.test(q) && /(free|available|gap|time|window|go out|hang out|clear)/i.test(q)) {
     return {
       intent: 'FIND_COMMON_SQUAD_AVAILABILITY',
       confidence: 'fallback',
-      parameters: { day: targetDay || context.currentDayName }
+      parameters: { day: extractDay(q) || context.currentDayName }
     };
   }
 
-  if (hasFree) {
+  // 6. Personal free time
+  if (/(free|available|open slot|window|break|gap|clear|spare time|open)/i.test(q)) {
+    let targetDay = extractDay(q);
+    if (!targetDay) {
+      if (q.includes('tomorrow')) targetDay = context.tomorrowDayName;
+      else if (q.includes('today')) targetDay = context.currentDayName;
+    }
     return {
       intent: 'FIND_PERSONAL_AVAILABILITY',
       confidence: 'fallback',
@@ -326,25 +370,27 @@ export function matchFallbackIntent(queryText, context = {}) {
     };
   }
 
-  if (hasClass) {
-    if (targetDay === context.tomorrowDayName) {
-      return {
-        intent: 'GET_TOMORROW_SCHEDULE',
-        confidence: 'fallback',
-        parameters: { day: targetDay }
-      };
-    }
-    if (targetDay) {
-      return {
-        intent: 'GET_DATE_SCHEDULE',
-        confidence: 'fallback',
-        parameters: { day: targetDay }
-      };
-    }
+  // 7. Explicit Schedule queries for a specific day
+  let targetDay = extractDay(q);
+  if (!targetDay) {
+    if (q.includes('tomorrow')) targetDay = context.tomorrowDayName;
+    else if (q.includes('today')) targetDay = context.currentDayName;
+  }
+
+  if (targetDay && /(class|lecture|schedule|timetable|subject)/i.test(q)) {
     return {
-      intent: 'GET_TODAY_SCHEDULE',
+      intent: targetDay === context.tomorrowDayName ? 'GET_TOMORROW_SCHEDULE' : 'GET_DATE_SCHEDULE',
       confidence: 'fallback',
-      parameters: { day: context.currentDayName }
+      parameters: { day: targetDay }
+    };
+  }
+
+  // 8. General timetable query without specific day -> Weekly insights (NOT today's classes!)
+  if (/(timetable|schedule|classes|lectures|subjects)/i.test(q)) {
+    return {
+      intent: 'GET_WEEKLY_SCHEDULE_INSIGHTS',
+      confidence: 'fallback',
+      parameters: {}
     };
   }
 
@@ -353,4 +399,73 @@ export function matchFallbackIntent(queryText, context = {}) {
     confidence: 'fallback',
     parameters: {}
   };
+}
+
+/**
+ * Phase 3: Hybrid generative synthesis using verified timetable facts.
+ * Generates an empathetic, conversational, structured plan strictly grounded
+ * in the student's actual timetable data (no hallucinations).
+ */
+export async function generateHybridAdviceWithGemini(userText, scheduleFacts, apiKey) {
+  if (!apiKey) throw new Error('NO_API_KEY');
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
+  const systemPrompt = `You are the UniSync Campus Assistant, an encouraging academic advisor and university life coordinator.
+The student is asking for advice, routine improvement, or how to balance academic study with relaxation and friends.
+
+STRICT ACCURACY RULES:
+1. Ground ALL scheduling statements strictly in the verified timetable facts below.
+2. NEVER invent non-existent classes, extra free periods, or different class hours.
+3. Keep the answer structured, encouraging, practical, and formatted in clean GitHub Markdown bullet points.
+4. Directly answer the student's question (e.g. specifically addressing relaxation, socializing, or study routines).
+
+VERIFIED TIMETABLE DATA:
+- Total weekly academic load: ${scheduleFacts.totalClassHours} hours across ${scheduleFacts.totalClasses} classes
+- Busiest day: ${scheduleFacts.busyDay || 'None'} (${scheduleFacts.busyClasses || 0} classes, ${scheduleFacts.busyDuration || '0h'})
+- Lightest active day: ${scheduleFacts.lightestDay || 'None'} (${scheduleFacts.lightestClasses || 0} classes, ${scheduleFacts.lightestDuration || '0h'})
+- Completely free days: ${scheduleFacts.freeDays?.length ? scheduleFacts.freeDays.join(', ') : 'None (has classes every weekday)'}
+- Key free breaks between classes:
+${scheduleFacts.keyFreeSlots?.map(s => `  • ${s.day}: ${s.time} (${s.duration})`).join('\n') || '  • Standard evening hours after classes'}
+- Enrolled subjects: ${scheduleFacts.subjects?.map(s => `${s.subject} (${s.classCount} classes/wk)`).join(', ') || 'General courses'}`;
+
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          { text: systemPrompt },
+          { text: `Student Question: "${userText}"` }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.3,
+      maxOutputTokens: 600
+    }
+  };
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error (HTTP ${response.status})`);
+    }
+
+    const data = await response.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('Empty response from Gemini');
+    return text.trim();
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
 }

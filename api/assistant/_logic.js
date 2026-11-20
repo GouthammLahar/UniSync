@@ -298,3 +298,100 @@ export function getLongestFreeSlot(schedule) {
   }
   return longest;
 }
+
+export function getEnrolledSubjects(schedule) {
+  if (!schedule) return [];
+  const subjectsMap = new Map();
+  for (const day of DAY_ORDER) {
+    const classes = getClassesForDay(schedule, day);
+    for (const c of classes) {
+      if (!c.subject) continue;
+      const existing = subjectsMap.get(c.subject) || {
+        subject: c.subject,
+        classCount: 0,
+        totalMins: 0,
+        types: new Set()
+      };
+      existing.classCount += 1;
+      existing.totalMins += (c.endMins - c.startMins);
+      if (c.typeLabel) existing.types.add(c.typeLabel);
+      subjectsMap.set(c.subject, existing);
+    }
+  }
+  return Array.from(subjectsMap.values()).map(s => ({
+    subject: s.subject,
+    classCount: s.classCount,
+    durationFormatted: formatDuration(s.totalMins),
+    types: Array.from(s.types).join(', ')
+  }));
+}
+
+export function getWeeklyFreeSlotsSummary(schedule) {
+  if (!schedule) return { keyFreeSlots: [], freeDays: [] };
+  const keyFreeSlots = [];
+  const freeDays = [];
+
+  for (const day of DAY_ORDER) {
+    const classes = getClassesForDay(schedule, day);
+    if (classes.length === 0) {
+      // Only treat standard academic days (Mon-Fri) as completely free days
+      if (['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(day)) {
+        freeDays.push(day);
+      }
+      continue;
+    }
+    const slots = findFreeSlotsForDay(schedule, day, { minDuration: 60 });
+    for (const slot of slots) {
+      // Only keep significant daytime breaks (between 09:00 and 17:00)
+      if (slot.durationMins >= 60 && slot.startMins >= 540 && slot.endMins <= 1080) {
+        keyFreeSlots.push({
+          day,
+          time: `${formatTime12(slot.startTime)} – ${formatTime12(slot.endTime)}`,
+          duration: formatDuration(slot.durationMins),
+          durationMins: slot.durationMins
+        });
+      }
+    }
+  }
+
+  // Sort slots by longest duration
+  keyFreeSlots.sort((a, b) => b.durationMins - a.durationMins);
+  return { keyFreeSlots, freeDays };
+}
+
+export function generateDeterministicAdvice(scheduleFacts) {
+  const busiest = scheduleFacts.busyDay;
+  const lightest = scheduleFacts.lightestDay;
+  const freeDays = scheduleFacts.freeDays || [];
+  const keySlots = scheduleFacts.keyFreeSlots || [];
+
+  let advice = `Here is a personalized balance plan based strictly on your active timetable:\n\n`;
+
+  // Academic workload
+  advice += `📚 **Academic Focus Strategy:**\n`;
+  if (busiest) {
+    advice += `• **Heaviest Day (${busiest}):** You have **${scheduleFacts.busyClasses} classes** totaling **${scheduleFacts.busyDuration}**. Prepare your lecture readings and assignments *before* ${busiest} to prevent mid-week burnout.\n`;
+  }
+  if (lightest && lightest !== busiest) {
+    advice += `• **Lightest Day (${lightest}):** With only **${scheduleFacts.lightestClasses} class${scheduleFacts.lightestClasses > 1 ? 'es' : ''}**, this is your best window for deep work, lab write-ups, or project milestones.\n`;
+  }
+
+  // Relaxation & Friends
+  advice += `\n🎉 **Socializing & Relaxation Windows:**\n`;
+  if (freeDays.length > 0) {
+    advice += `• **Completely Open Days:** You have **${freeDays.join(' and ')}** with zero classes scheduled—ideal for spending quality time with friends, squad outings, or hobbies.\n`;
+  }
+  if (keySlots.length > 0) {
+    const topSlots = keySlots.slice(0, 2);
+    topSlots.forEach(s => {
+      advice += `• **${s.day} (${s.time}):** You have an uninterrupted **${s.duration} break** between classes—perfect for shared lunches or quick squad catch-ups.\n`;
+    });
+  } else {
+    advice += `• Reserve weekday evenings after 18:00 for guilt-free downtime with friends once daily classes conclude.\n`;
+  }
+
+  // Routine tips
+  advice += `\n💡 **Routine Recommendation:** Block out 1.5 hours on your lighter days for study so that your major breaks and free days remain 100% available for relaxation!`;
+
+  return advice;
+}

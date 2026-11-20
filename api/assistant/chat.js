@@ -22,10 +22,13 @@ import {
   findFreeSlotsForDay,
   findCommonFreeSlotsAcrossStudents,
   calculateWeeklyInsights,
-  getLongestFreeSlot
+  getLongestFreeSlot,
+  getEnrolledSubjects,
+  getWeeklyFreeSlotsSummary,
+  generateDeterministicAdvice
 } from './_logic.js';
 import { getNowInTimezone, resolveTargetDay, getSafeTimezone } from './_date.js';
-import { matchDeterministicIntent, extractIntentWithGemini, matchFallbackIntent } from './_nlu.js';
+import { matchDeterministicIntent, extractIntentWithGemini, matchFallbackIntent, generateHybridAdviceWithGemini } from './_nlu.js';
 import { consumeRateLimit, checkRateLimitPrecondition, getUserRemainingAllowance, USER_DAILY_LIMIT } from './_rate-limit.js';
 import { getHelpResponse } from './_kb.js';
 
@@ -194,7 +197,9 @@ export default async function handler(req, res) {
     'GET_WEEKLY_SCHEDULE_INSIGHTS',
     'GET_BUSY_DAY',
     'GET_LIGHTEST_DAY',
-    'GET_LONGEST_FREE_SLOT'
+    'GET_LONGEST_FREE_SLOT',
+    'PRODUCTIVITY_AND_BALANCE',
+    'ACADEMIC_ATTENDANCE_QUERY'
   ].includes(intent);
 
   if (needsPersonalSchedule) {
@@ -222,12 +227,77 @@ export default async function handler(req, res) {
   // Dispatch intent calculations
   switch (intent) {
     case 'GREETING': {
-      answer = `👋 Hello! I am your **UniSync Campus Assistant**.\n\nI can help you check your timetable, find personal free periods, and coordinate study sessions or hangouts with your squad.\n\nHow can I help you today?`;
+      answer = `👋 Hello! I am your **UniSync Campus Assistant**.\n\nI can help you check your timetable, find personal free periods, plan your weekly routine, and coordinate study sessions or hangouts with your squad.\n\nHow can I help you today?`;
       suggestedPrompts = [
-        'What classes do I have today?',
         'What classes do I have tomorrow?',
-        'When am I free today?',
+        'What is my busiest day?',
+        'How can I improve my weekly routine?',
         'When can my squad meet?'
+      ];
+      break;
+    }
+
+    case 'ACADEMIC_ATTENDANCE_QUERY': {
+      let subjectsMd = '';
+      if (userSchedule && Object.keys(userSchedule).length > 0) {
+        const subjects = getEnrolledSubjects(userSchedule);
+        if (subjects.length > 0) {
+          subjectsMd = `\n\n**Your Enrolled Courses (from Timetable):**\n` +
+            subjects.map((s, i) => `${i + 1}. **${s.subject}** (${s.classCount} classes/wk, ${s.durationFormatted}${s.types ? ` · ${s.types}` : ''})`).join('\n');
+        }
+      }
+
+      answer = `I can analyse your timetable and class distribution, but I don't currently have access to your attendance or academic performance records.${subjectsMd}\n\n💡 *Tip: For official attendance percentages, internal marks, and exam grades, please consult your university student portal.*`;
+      suggestedPrompts = ['What is my busiest day?', 'Weekly schedule insights', 'When can my squad meet?'];
+      break;
+    }
+
+    case 'PRODUCTIVITY_AND_BALANCE': {
+      if (!userSchedule || Object.keys(userSchedule).length === 0) {
+        answer = `You haven't uploaded a timetable for this squad yet.\n\nUpload your schedule under **My Timetable** so I can evaluate your class blocks, free gaps, and craft a personalized balance plan!`;
+        suggestedPrompts = ['How do I import my timetable?', 'Help me join a squad'];
+        break;
+      }
+
+      const insights = calculateWeeklyInsights(userSchedule);
+      const freeInfo = getWeeklyFreeSlotsSummary(userSchedule);
+      const subjects = getEnrolledSubjects(userSchedule);
+
+      const scheduleFacts = {
+        totalClassHours: insights.totalClassHours,
+        totalClasses: insights.totalClasses,
+        busyDay: insights.busyDay,
+        busyClasses: insights.dayBreakdown[insights.busyDay]?.classCount || 0,
+        busyDuration: insights.dayBreakdown[insights.busyDay]?.durationFormatted || '0h',
+        lightestDay: insights.lightestDay,
+        lightestClasses: insights.dayBreakdown[insights.lightestDay]?.classCount || 0,
+        lightestDuration: insights.dayBreakdown[insights.lightestDay]?.durationFormatted || '0h',
+        freeDays: freeInfo.freeDays,
+        keyFreeSlots: freeInfo.keyFreeSlots,
+        subjects
+      };
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      const isGeminiEnabled = Boolean(apiKey && process.env.ENABLE_GEMINI_AI !== 'false');
+
+      if (isGeminiEnabled) {
+        try {
+          answer = await generateHybridAdviceWithGemini(cleanQuestion, scheduleFacts, apiKey);
+          executionTier = 'ai';
+        } catch (err) {
+          console.warn('[Assistant] Gemini advice synthesis failed, using verified deterministic advice:', err.message);
+          answer = generateDeterministicAdvice(scheduleFacts);
+          executionTier = 'fallback';
+        }
+      } else {
+        answer = generateDeterministicAdvice(scheduleFacts);
+        executionTier = 'deterministic';
+      }
+
+      suggestedPrompts = [
+        'When can my squad meet?',
+        'What is my longest free slot?',
+        'Show my schedule for ' + (insights.busyDay || 'Monday')
       ];
       break;
     }

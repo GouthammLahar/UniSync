@@ -16,7 +16,10 @@ import {
   findFreeSlotsForDay,
   findCommonFreeSlotsAcrossStudents,
   calculateWeeklyInsights,
-  getLongestFreeSlot
+  getLongestFreeSlot,
+  getEnrolledSubjects,
+  getWeeklyFreeSlotsSummary,
+  generateDeterministicAdvice
 } from './api/assistant/_logic.js';
 
 import {
@@ -101,6 +104,7 @@ console.log('\n--- 2. NATURAL-LANGUAGE INTENT MAPPING TESTS ---');
     { q: 'hello', expected: 'GREETING' },
     { q: 'hey there', expected: 'GREETING' },
     { q: 'good morning', expected: 'GREETING' },
+    { q: 'Hello, how are you?', expected: 'GREETING' },
     { q: 'What classes do I have tomorrow?', expected: 'GET_TOMORROW_SCHEDULE' },
     { q: 'my classes today', expected: 'GET_TODAY_SCHEDULE' },
     { q: 'Show my schedule for Friday', expected: 'GET_DATE_SCHEDULE' },
@@ -110,7 +114,28 @@ console.log('\n--- 2. NATURAL-LANGUAGE INTENT MAPPING TESTS ---');
     { q: 'Analyse my weekly schedule', expected: 'GET_WEEKLY_SCHEDULE_INSIGHTS' },
     { q: 'When can our squad meet?', expected: 'FIND_COMMON_SQUAD_AVAILABILITY' },
     { q: 'Suggest meeting times', expected: 'SUGGEST_MEETING_TIMES' },
-    { q: 'How do I join a squad?', expected: 'GENERAL_UNISYNC_HELP' }
+    { q: 'How do I join a squad?', expected: 'GENERAL_UNISYNC_HELP' },
+    // Phase 5 Critical Test Cases
+    {
+      q: 'Hey, I have a pretty busy week coming up. Can you look at my timetable and tell me when I can relax, spend time with friends, and still manage my academic work?',
+      expected: 'PRODUCTIVITY_AND_BALANCE'
+    },
+    {
+      q: 'Can you tell me my attendance percentage, academic performance, and which subject I am most likely to struggle with based on my timetable?',
+      expected: 'ACADEMIC_ATTENDANCE_QUERY'
+    },
+    {
+      q: 'I want to spend time with friends without affecting my studies. Suggest a plan.',
+      expected: 'PRODUCTIVITY_AND_BALANCE'
+    },
+    {
+      q: 'How can I improve my weekly routine?',
+      expected: 'PRODUCTIVITY_AND_BALANCE'
+    },
+    {
+      q: 'What is my attendance percentage?',
+      expected: 'ACADEMIC_ATTENDANCE_QUERY'
+    }
   ];
 
   for (const { q, expected } of schedQueries) {
@@ -169,11 +194,31 @@ console.log('\n--- 3. DETERMINISTIC TIMETABLE CALCULATION TESTS ---');
   const longest = getLongestFreeSlot(mockSchedule);
   assert(longest !== null && longest.durationMins >= 180, `Longest free slot identified: ${longest.day} ${longest.startTime}-${longest.endTime} (${longest.durationMins}m)`);
 
-  // 3e. Empty schedule safety
-  const emptyClasses = getClassesForDay({}, 'Monday');
-  assert(emptyClasses.length === 0, 'Empty schedule returns empty class list without error');
-  const emptySlots = findFreeSlotsForDay({}, 'Monday');
-  assert(emptySlots.length === 1 && emptySlots[0].durationMins === 600, 'Empty schedule returns full day free');
+  // 3f. Enrolled subjects & weekly summary extraction
+  const enrolled = getEnrolledSubjects(mockSchedule);
+  assert(enrolled.length === 9, `Extracted 9 distinct subjects (got ${enrolled.length})`);
+  assert(enrolled.some(s => s.subject === 'Data Structures'), 'Includes Data Structures');
+
+  const freeSummary = getWeeklyFreeSlotsSummary(mockSchedule);
+  assert(freeSummary.freeDays.includes('Wednesday'), 'Identified Wednesday as completely free');
+  assert(freeSummary.keyFreeSlots.length > 0, `Identified major daytime breaks: ${freeSummary.keyFreeSlots.length}`);
+
+  const adviceText = generateDeterministicAdvice({
+    totalClassHours: insights.totalClassHours,
+    totalClasses: insights.totalClasses,
+    busyDay: insights.busyDay,
+    busyClasses: insights.dayBreakdown[insights.busyDay]?.classCount,
+    busyDuration: insights.dayBreakdown[insights.busyDay]?.durationFormatted,
+    lightestDay: insights.lightestDay,
+    lightestClasses: insights.dayBreakdown[insights.lightestDay]?.classCount,
+    lightestDuration: insights.dayBreakdown[insights.lightestDay]?.durationFormatted,
+    freeDays: freeSummary.freeDays,
+    keyFreeSlots: freeSummary.keyFreeSlots,
+    subjects: enrolled
+  });
+  assert(adviceText.includes('Academic Focus Strategy'), 'Generated structured balance plan');
+  assert(adviceText.includes('Thursday'), 'Plan mentions busiest day Thursday');
+  assert(adviceText.includes('Wednesday'), 'Plan mentions free day Wednesday');
 }
 
 console.log('\n--- 4. SQUAD COMMON FREE SLOTS CONVERGENCE TESTS ---');

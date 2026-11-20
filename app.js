@@ -1,3 +1,4 @@
+import { inject, pageview } from '@vercel/analytics';
 import { 
   auth, loginWithGoogle, logoutUser, onAuthChange,
   createGroup, joinGroup, leaveGroup, getUserGroups,
@@ -21,6 +22,9 @@ import { initNotificationBell, cleanupNotificationBell } from './notifications.j
 import { initAssistant, toggleAssistantFab, closeAssistantDrawer } from './assistant.js?v=11';
 import { initSquadChat, switchSquadSubtab, openSquadChat, closeSquadChatListener } from './squad-chat.js?v=10';
 import { registerServiceWorker } from './fcm.js?v=10';
+
+// Initialize Vercel Web Analytics exactly once
+inject();
 
 document.addEventListener('DOMContentLoaded', () => {
   // Register Service Worker for PWA installability and background push
@@ -81,12 +85,22 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ── VIEW ROUTER ────────────────────────────────────────────────────────────
+  // Initial active view in index.html is landing-view (already recorded on initial load by inject())
+  let currentActiveViewId = 'landing-view';
+
   function switchView(targetId) {
     if (window.location.hash) {
       history.replaceState(null, '', window.location.pathname);
     }
     navBtns.forEach(b => b.classList.toggle('active', b.getAttribute('data-target') === targetId));
     views.forEach(v => v.classList.toggle('active', v.id === targetId));
+
+    // Track SPA pageview on route change (avoid duplicate events for the same view)
+    if (targetId && targetId !== currentActiveViewId) {
+      currentActiveViewId = targetId;
+      const cleanRoute = '/' + targetId.replace(/-view$/, '');
+      pageview({ route: cleanRoute, path: cleanRoute });
+    }
 
     // Close user dropdown if open
     if (userDropdown) userDropdown.classList.add('hidden');

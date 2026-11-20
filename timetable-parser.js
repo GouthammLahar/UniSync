@@ -194,7 +194,7 @@ function parseNewFormatEntry(text, timing) {
     type:      typeCode,
     typeLabel: classType,
     subject:   courseCode,
-    batch,
+    batch:     batch || null,
     isMakeup,
     status: 'busy'
   };
@@ -222,24 +222,44 @@ function parseOldFormatCell(text) {
   const timeLine   = lines[0];
   const detailLine = lines[1];
 
-  const timeMatch = timeLine.match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+  const timeMatch = timeLine.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
   if (!timeMatch) return null;
 
-  const startTime = timeMatch[1];
-  const endTime   = timeMatch[2];
+  let sh = parseInt(timeMatch[1], 10);
+  const sm = timeMatch[2];
+  let eh = parseInt(timeMatch[3], 10);
+  const em = timeMatch[4];
+  const per = (timeMatch[5] || '').toUpperCase();
+
+  if (per === 'PM') {
+    if (sh !== 12) sh += 12;
+    if (eh !== 12) eh += 12;
+  } else if (per === 'AM') {
+    if (sh === 12) sh = 0;
+    if (eh === 12) eh = 0;
+  }
+  if (eh < sh) eh += 12;
+
+  const startTime = sh.toString().padStart(2, '0') + ':' + sm;
+  const endTime   = eh.toString().padStart(2, '0') + ':' + em;
 
   const parts = detailLine.split(' - ').map(p => p.trim()).filter(Boolean);
   if (parts.length < 3) return null;
 
-  const room           = parts[0];
-  const type           = parts[1];
-  const subjectAndBatch = parts[2];
+  const room = parts[0];
+  const rawType = parts[1].toUpperCase();
+  const type = (rawType === 'P' || rawType === 'T' || rawType === 'L')
+    ? rawType
+    : (CLASS_TYPE_CODE[rawType.toLowerCase()] || 'L');
 
+  const subjectAndBatch = parts[2];
   const subParts = subjectAndBatch.trim().split(/\s+/);
   const subject  = subParts[0] || '';
-  const batch    = subParts[1] || '';
+  const batch    = subParts.length > 1 ? subParts.slice(1).join(' ') : null;
 
   if (subject.startsWith('CSES00')) return null;
+
+  const isMakeup = /makeup/i.test(text);
 
   return {
     startTime,
@@ -250,7 +270,7 @@ function parseOldFormatCell(text) {
     typeLabel: TYPE_MAP[type] || type,
     subject,
     batch,
-    isMakeup:  false,
+    isMakeup,
     status:    'busy'
   };
 }
@@ -304,20 +324,28 @@ function parseTiming(raw) {
 }
 
 /**
- * Finds the column index used for timing information.
- * Scans rows from (headerRowIdx + 1) looking for cells that match a time range
- * pattern (HH:MM-HH:MM).  Returns the column index or -1 if not found.
+ * Finds the column index used for timing information in Format B layouts.
+ * Scans rows from (headerRowIdx + 1) looking for cells that match a pure
+ * time range pattern (HH:MM-HH:MM).
+ *
+ * NOTE: Day columns are explicitly excluded so that class cells with embedded
+ * times (like in Format A / Gtn.xlsx) are never misidentified as a dedicated
+ * timing column.
+ *
+ * Returns the column index or -1 if not found.
  */
-function findTimingColumn(rows, headerRowIdx) {
-  const timeRe = /\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2}/;
+function findTimingColumn(rows, headerRowIdx, dayColumns = {}) {
+  const dayColSet = new Set(Object.values(dayColumns));
+  const timeOnlyRe = /^\s*\d{1,2}[:.]\d{2}\s*[-–]\s*\d{1,2}[:.]\d{2}(\s*(AM|PM))?\s*$/i;
   // Look at up to 10 data rows
   const limit = Math.min(headerRowIdx + 11, rows.length);
   for (let ri = headerRowIdx + 1; ri < limit; ri++) {
     const row = rows[ri];
     if (!row) continue;
     for (let ci = 0; ci < row.length; ci++) {
+      if (dayColSet.has(ci)) continue; // Day columns cannot be dedicated timing columns
       const val = row[ci];
-      if (val && timeRe.test(String(val))) return ci;
+      if (val && timeOnlyRe.test(String(val).trim())) return ci;
     }
   }
   return -1;
@@ -487,9 +515,9 @@ export function parseLpuExcel(file) {
 
         // ── STEP 3: Detect layout format ─────────────────────────────────────
         // Format B uses a separate timing column; Format A embeds timing in
-        // each class cell.  We detect by looking for time-range values in a
+        // each class cell. We detect by looking for time-range values in a
         // non-day column of the data rows.
-        const timingColIdx = findTimingColumn(rows, headerRowIdx);
+        const timingColIdx = findTimingColumn(rows, headerRowIdx, dayColumns);
         const isFormatB    = timingColIdx >= 0;
 
         // ── STEP 4: Extract student ID ───────────────────────────────────────
@@ -529,16 +557,15 @@ export function parseLpuExcel(file) {
             // ', Lecture' / ', Tutorial' / ', Practical' (comma + space + type).
             const parsedEntries = [];
 
-            if (isFormatB && isNewFormat(cellText)) {
-              // Split on ", <ClassType>" boundaries to handle multi-entry cells
-              // e.g. "Practical / G:0 ... , Practical / G:1 ... (Makeup Class)"
+            if (isNewFormat(cellText)) {
+              // Tagged format (Format B / rptTimeTableStudent.xlsx)
               const entryTexts = cellText.split(/,\s*(?=(?:Lecture|Tutorial|Practical))/i);
               for (const entryText of entryTexts) {
                 const p = parseNewFormatEntry(entryText, lastTiming);
                 if (p) parsedEntries.push(p);
               }
-            } else if (!isFormatB) {
-              // Format A: timing is embedded in the cell
+            } else {
+              // Embedded timing format (Format A / Gtn.xlsx)
               const p = parseOldFormatCell(cellText);
               if (p) parsedEntries.push(p);
             }
@@ -546,7 +573,7 @@ export function parseLpuExcel(file) {
             for (const parsed of parsedEntries) {
               // Deduplicate: same day + start time + course code + batch
               // (handles merged-cell expansion producing identical entries)
-              const dedupKey = `${day}|${parsed.startTime}|${parsed.subject}|${parsed.batch}`;
+              const dedupKey = `${day}|${parsed.startTime}|${parsed.subject}|${parsed.batch || ''}`;
               if (seen.has(dedupKey)) continue;
               seen.add(dedupKey);
 

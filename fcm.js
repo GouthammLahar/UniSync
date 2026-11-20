@@ -24,22 +24,144 @@ function getMessagingInstance() {
   return _messaging;
 }
 
+let _registrationPromise = null;
+let _refreshing = false;
+
 /**
  * Registers the service worker with root scope '/' if supported.
  * Safe to call on app load; does not request push notification permission.
+ * Includes lifecycle listeners to detect pending updates and surface the update UI.
  * @returns {Promise<ServiceWorkerRegistration|null>}
  */
 export async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) {
     return null;
   }
-  try {
-    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
-    console.log('Service Worker registered:', registration.scope);
-    return registration;
-  } catch (err) {
-    console.error('Service Worker registration failed:', err);
-    return null;
+
+  // Prevent multiple concurrent registrations
+  if (_registrationPromise) {
+    return _registrationPromise;
+  }
+
+  _registrationPromise = (async () => {
+    try {
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+      console.log('[SW] Service Worker registered:', registration.scope);
+
+      // Listen for controllerchange to reload safely exactly once
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (_refreshing) return;
+        _refreshing = true;
+        console.log('[SW] New controller active. Reloading application...');
+        window.location.reload();
+      });
+
+      // If a service worker is already waiting (e.g. from previous visit or tab)
+      if (registration.waiting) {
+        notifyUpdateAvailable(registration.waiting);
+      }
+
+      // Check on updatefound event
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        if (!newWorker) return;
+
+        newWorker.addEventListener('statechange', () => {
+          // When the new worker is installed and waiting
+          if (newWorker.state === 'installed') {
+            if (navigator.serviceWorker.controller) {
+              // Existing installation updated: notify user
+              notifyUpdateAvailable(newWorker);
+            } else {
+              // First-time install: do not show update prompt
+              console.log('[SW] First-time install completed. Content cached for offline use.');
+            }
+          }
+        });
+      });
+
+      // Periodically check for updates (every 60 minutes) and on window focus
+      if (window.location.hostname !== 'localhost') {
+        setInterval(() => {
+          registration.update().catch(e => console.warn('[SW] Periodic update check failed:', e));
+        }, 60 * 60 * 1000);
+      }
+
+      window.addEventListener('focus', () => {
+        registration.update().catch(e => console.warn('[SW] Focus update check failed:', e));
+      });
+
+      return registration;
+    } catch (err) {
+      console.error('[SW] Service Worker registration failed:', err);
+      return null;
+    }
+  })();
+
+  return _registrationPromise;
+}
+
+/**
+ * Displays an elegant non-intrusive banner notifying the user an update is ready.
+ * Includes "Update Now" and "Later" buttons matching UniSync's design system.
+ * @param {ServiceWorker} worker - The waiting service worker instance
+ */
+function notifyUpdateAvailable(worker) {
+  // Prevent duplicate banners
+  if (document.getElementById('unisync-update-banner')) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'unisync-update-banner';
+  banner.className = 'pwa-update-banner';
+  banner.setAttribute('role', 'alert');
+  banner.innerHTML = `
+    <div class="pwa-update-content">
+      <div class="pwa-update-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+        </svg>
+      </div>
+      <div class="pwa-update-text">
+        <strong>New version available</strong>
+        <span>Update UniSync for the latest features & schedule sync improvements.</span>
+      </div>
+    </div>
+    <div class="pwa-update-actions">
+      <button type="button" class="btn-update-now" id="pwa-update-now-btn">Update Now</button>
+      <button type="button" class="btn-update-later" id="pwa-update-later-btn">Later</button>
+    </div>
+  `;
+
+  document.body.appendChild(banner);
+
+  const updateNowBtn = document.getElementById('pwa-update-now-btn');
+  const updateLaterBtn = document.getElementById('pwa-update-later-btn');
+
+  if (updateNowBtn) {
+    updateNowBtn.addEventListener('click', () => {
+      updateNowBtn.disabled = true;
+      updateNowBtn.innerText = 'Updating…';
+
+      // Tell waiting service worker to skip waiting
+      if (worker && worker.state !== 'redundant') {
+        worker.postMessage({ type: 'SKIP_WAITING' });
+      } else {
+        navigator.serviceWorker.getRegistration().then(reg => {
+          if (reg?.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          } else {
+            window.location.reload();
+          }
+        });
+      }
+    });
+  }
+
+  if (updateLaterBtn) {
+    updateLaterBtn.addEventListener('click', () => {
+      banner.classList.add('dismissed');
+      setTimeout(() => banner.remove(), 300);
+    });
   }
 }
 

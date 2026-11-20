@@ -116,6 +116,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (targetId === 'groups-view')     renderGroupsDashboard();
     if (targetId === 'right-now-view')  renderLiveTracker();
     if (targetId === 'meetings-view')   enterMeetingsView();
+    if (targetId === 'find-view') {
+      if (activeGroupId) executeFriendSearch(searchInput ? searchInput.value : '');
+    }
     if (targetId === 'squad-view') {
       const chatPane = document.getElementById('squad-chat-pane');
       if (chatPane && !chatPane.classList.contains('hidden')) {
@@ -642,10 +645,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Render Weekly Matrix
-  function renderWeeklyMatrix(gridDOM, scheduleMap) {
+  function renderWeeklyMatrix(gridDOM, scheduleMap, options = {}) {
     if (!gridDOM) return;
     gridDOM.innerHTML = '';
+    const readOnly = !!options.readOnly;
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    if (scheduleMap && scheduleMap['Sunday'] && Object.keys(scheduleMap['Sunday']).length > 0) {
+      days.push('Sunday');
+    }
+
+    if (days.length > 6) {
+      gridDOM.style.gridTemplateColumns = `repeat(${days.length}, minmax(170px, 1fr))`;
+    } else {
+      gridDOM.style.gridTemplateColumns = '';
+    }
 
     days.forEach(day => {
       const col = document.createElement('div');
@@ -668,9 +681,11 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="matrix-empty-icon">☕</span>
           <span class="matrix-empty-title">No classes</span>
           <span class="matrix-empty-sub">Enjoy your day</span>
-          <button type="button" class="matrix-empty-add-btn">+ Add Class</button>
+          ${!readOnly ? `<button type="button" class="matrix-empty-add-btn">+ Add Class</button>` : ''}
         `;
-        emptyDay.querySelector('.matrix-empty-add-btn').addEventListener('click', () => openClassModalForAdd(day));
+        if (!readOnly) {
+          emptyDay.querySelector('.matrix-empty-add-btn')?.addEventListener('click', () => openClassModalForAdd(day));
+        }
         list.appendChild(emptyDay);
       } else {
         daySlots.sort(([a], [b]) => a.split(' - ')[0].localeCompare(b.split(' - ')[0]));
@@ -678,7 +693,12 @@ document.addEventListener('DOMContentLoaded', () => {
           const [startT, endT] = slotKey.split(' - ');
           const card = document.createElement('div');
           card.className = 'matrix-card';
-          card.title = 'Click to edit or remove this class';
+          if (!readOnly) {
+            card.title = 'Click to edit or remove this class';
+          } else {
+            card.title = `${data.subject || 'Class'}: ${formatTime12(startT)} – ${formatTime12(endT)}`;
+            card.style.cursor = 'default';
+          }
           card.innerHTML = `
             <div class="matrix-time">${formatTime12(startT)} – ${formatTime12(endT)}</div>
             <div class="matrix-subj">${data.subject || 'Class'}</div>
@@ -686,20 +706,25 @@ document.addEventListener('DOMContentLoaded', () => {
               <span class="type-badge type-${data.type || 'L'}">${data.typeLabel || 'Lecture'}</span>
               ${data.room ? `<span class="room-pill">📍 ${data.room}</span>` : ''}
               ${data.batch ? `<span class="batch-pill">${data.batch}</span>` : ''}
+              ${data.isMakeup ? `<span class="makeup-badge" style="background:var(--terracotta-subtle); color:var(--terracotta); font-size:0.68rem; padding:2px 6px; border-radius:var(--r-pill); font-weight:700;">MAKEUP</span>` : ''}
             </div>
           `;
-          card.addEventListener('click', () => openClassModalForEdit(day, slotKey, data));
+          if (!readOnly) {
+            card.addEventListener('click', () => openClassModalForEdit(day, slotKey, data));
+          }
           list.appendChild(card);
         });
 
-        // + Add Class button positioned cleanly under the last class
-        const addBtn = document.createElement('button');
-        addBtn.type = 'button';
-        addBtn.className = 'matrix-add-btn';
-        addBtn.innerHTML = `+ Add Class`;
-        addBtn.title = `Add a class to ${day}`;
-        addBtn.addEventListener('click', () => openClassModalForAdd(day));
-        list.appendChild(addBtn);
+        if (!readOnly) {
+          // + Add Class button positioned cleanly under the last class
+          const addBtn = document.createElement('button');
+          addBtn.type = 'button';
+          addBtn.className = 'matrix-add-btn';
+          addBtn.innerHTML = `+ Add Class`;
+          addBtn.title = `Add a class to ${day}`;
+          addBtn.addEventListener('click', () => openClassModalForAdd(day));
+          list.appendChild(addBtn);
+        }
       }
 
       col.appendChild(list);
@@ -708,9 +733,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Render Day Cards
-  function renderDayCards(containerDOM, scheduleMap) {
+  function renderDayCards(containerDOM, scheduleMap, options = {}) {
     if (!containerDOM) return;
     containerDOM.innerHTML = '';
+    const readOnly = !!options.readOnly;
     if (!scheduleMap || Object.keys(scheduleMap).length === 0) {
       containerDOM.innerHTML = '<div class="empty-state" style="padding:2rem; text-align:center; color:var(--ink-muted);"><p>No classes found in this timetable.</p></div>';
       return;
@@ -746,7 +772,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const slotEl = document.createElement('div');
         slotEl.className = `slot-item${inClassNow ? ' active-slot' : ''}`;
-        slotEl.title = 'Click to edit or remove this class';
+        if (!readOnly) {
+          slotEl.title = 'Click to edit or remove this class';
+        } else {
+          slotEl.style.cursor = 'default';
+        }
         slotEl.innerHTML = `
           <div class="slot-time-col">
             <span class="slot-start">${formatTime12(startT)}</span>
@@ -757,29 +787,95 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="slot-details-col">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
               <div class="slot-subject">${data.subject || 'Class'}</div>
-              <span class="slot-edit-badge">✏️ Edit</span>
+              ${!readOnly ? `<span class="slot-edit-badge">✏️ Edit</span>` : ''}
             </div>
             <div class="slot-meta">
               <span class="type-badge type-${data.type}">${typeLabel}</span>
               ${data.room ? `<span>📍 ${data.room}</span>` : ''}
               ${data.batch ? `<span>${data.batch}</span>` : ''}
+              ${data.isMakeup ? `<span class="makeup-badge" style="background:var(--terracotta-subtle); color:var(--terracotta); font-size:0.68rem; padding:2px 6px; border-radius:var(--r-pill); font-weight:700;">MAKEUP</span>` : ''}
             </div>
           </div>`;
-        slotEl.addEventListener('click', () => openClassModalForEdit(day, slotKey, data));
+        if (!readOnly) {
+          slotEl.addEventListener('click', () => openClassModalForEdit(day, slotKey, data));
+        }
         slotList.appendChild(slotEl);
       });
 
       dayCard.appendChild(slotList);
 
-      // + Add button at bottom of each day card
-      const dayAddBtn = document.createElement('button');
-      dayAddBtn.type = 'button';
-      dayAddBtn.className = 'day-card-add-btn';
-      dayAddBtn.innerHTML = `+ Add Class to ${day}`;
-      dayAddBtn.addEventListener('click', () => openClassModalForAdd(day));
-      dayCard.appendChild(dayAddBtn);
+      if (!readOnly) {
+        // + Add button at bottom of each day card
+        const dayAddBtn = document.createElement('button');
+        dayAddBtn.type = 'button';
+        dayAddBtn.className = 'day-card-add-btn';
+        dayAddBtn.innerHTML = `+ Add Class to ${day}`;
+        dayAddBtn.addEventListener('click', () => openClassModalForAdd(day));
+        dayCard.appendChild(dayAddBtn);
+      }
 
       containerDOM.appendChild(dayCard);
+    });
+  }
+
+  // Render Read-Only Table View
+  function renderReadOnlyTable(tbodyDOM, scheduleMap) {
+    if (!tbodyDOM) return;
+    tbodyDOM.innerHTML = '';
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    let allRows = [];
+    if (scheduleMap) {
+      days.forEach(day => {
+        if (scheduleMap[day]) {
+          Object.entries(scheduleMap[day]).forEach(([slotKey, data]) => {
+            if (data.status === 'busy') {
+              const [startT, endT] = slotKey.split(' - ');
+              allRows.push({
+                day,
+                startTime: data.startTime || startT,
+                endTime: data.endTime || endT,
+                subject: data.subject || 'Class',
+                type: data.type || 'L',
+                typeLabel: data.typeLabel || (data.type === 'P' ? 'Practical' : (data.type === 'T' ? 'Tutorial' : 'Lecture')),
+                room: data.room || '',
+                batch: data.batch || '',
+                isMakeup: data.isMakeup || false
+              });
+            }
+          });
+        }
+      });
+    }
+
+    if (allRows.length === 0) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="7" style="text-align:center; padding:2rem; color:var(--ink-muted);">No classes found in this timetable.</td>`;
+      tbodyDOM.appendChild(tr);
+      return;
+    }
+
+    allRows.sort((a, b) => {
+      const dDiff = days.indexOf(a.day) - days.indexOf(b.day);
+      if (dDiff !== 0) return dDiff;
+      return a.startTime.localeCompare(b.startTime);
+    });
+
+    allRows.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong style="color:var(--ink);">${row.day}</strong></td>
+        <td><span style="font-family:var(--font-mono); font-size:0.82rem; font-weight:600;">${formatTime12(row.startTime)}</span></td>
+        <td><span style="font-family:var(--font-mono); font-size:0.82rem; font-weight:600;">${formatTime12(row.endTime)}</span></td>
+        <td>
+          <strong style="color:var(--forest-dark);">${row.subject}</strong>
+          ${row.isMakeup ? `<span class="makeup-badge" style="background:var(--terracotta-subtle); color:var(--terracotta); font-size:0.68rem; padding:2px 6px; border-radius:var(--r-pill); font-weight:700; margin-left:4px;">MAKEUP</span>` : ''}
+        </td>
+        <td><span class="type-badge type-${row.type}">${row.typeLabel}</span></td>
+        <td>${row.room ? `<span class="room-pill">📍 ${row.room}</span>` : '<span style="color:var(--ink-muted);">—</span>'}</td>
+        <td>${row.batch ? `<span class="batch-pill">${row.batch}</span>` : '<span style="color:var(--ink-muted);">—</span>'}</td>
+      `;
+      tbodyDOM.appendChild(tr);
     });
   }
 
@@ -1294,74 +1390,284 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   /* =========================================================
-     5. FIND FRIENDS & 1-ON-1 SCHEDULE COMPARE
+     5. FIND FRIENDS & TIMETABLE VIEWER
   ========================================================= */
-  const searchBtn           = document.getElementById('search-btn');
-  const searchInput         = document.getElementById('search-input');
-  const searchResultsDiv    = document.getElementById('search-results');
-  const friendSchedWrap     = document.getElementById('friend-schedule-container');
-  const friendNameDisplay   = document.querySelector('#friend-name-display span');
-  const calendarGrid        = document.getElementById('calendar-grid');
-  const compareFriendBtn    = document.getElementById('compare-friend-btn');
-  const friendCompareResults= document.getElementById('friend-compare-results');
+  const searchBtn                 = document.getElementById('search-btn');
+  const searchInput               = document.getElementById('search-input');
+  const searchResultsDiv          = document.getElementById('search-results');
+  const friendSchedWrap           = document.getElementById('friend-schedule-container');
+  const friendBackBtn             = document.getElementById('friend-back-btn');
+  const friendNameDisplay         = document.getElementById('friend-name-display');
+  const friendAvatarCircle        = document.getElementById('friend-avatar-circle');
+  const friendNicknamesBadge      = document.getElementById('friend-nicknames-badge');
+  const friendTimetableMeta       = document.getElementById('friend-timetable-meta');
+  const friendTimetableStatus     = document.getElementById('friend-timetable-status');
+  const friendViewToggleBar       = document.getElementById('friend-view-toggle-bar');
+  const friendTimetableLoading    = document.getElementById('friend-timetable-loading');
+  const friendTimetableError      = document.getElementById('friend-timetable-error');
+  const friendTimetableErrorMsg   = document.getElementById('friend-timetable-error-msg');
+  const friendTimetableEmpty      = document.getElementById('friend-timetable-empty');
+  const friendEmptyTitle          = document.getElementById('friend-empty-title');
+  const friendEmptyDesc           = document.getElementById('friend-empty-desc');
+  const friendCompareResults      = document.getElementById('friend-compare-results');
+  const compareFriendBtn          = document.getElementById('compare-friend-btn');
+
+  // Viewing container DOM elements
+  const friendWeeklyMatrixContainer = document.getElementById('friend-weekly-matrix-container');
+  const friendWeeklyMatrixGrid      = document.getElementById('friend-weekly-matrix-grid');
+  const friendDayCardsWrapper       = document.getElementById('friend-day-cards-wrapper');
+  const friendCalendarGrid          = document.getElementById('friend-calendar-grid');
+  const friendTableViewWrapper      = document.getElementById('friend-table-view-wrapper');
+  const friendTableTbody            = document.getElementById('friend-table-tbody');
+
+  // View toggle buttons
+  const btnFriendToggleMatrix     = document.getElementById('btn-friend-toggle-matrix');
+  const btnFriendToggleCards      = document.getElementById('btn-friend-toggle-cards');
+  const btnFriendToggleTable      = document.getElementById('btn-friend-toggle-table');
+
+  let activeFriendSchedule = null;
+  let activeFriendViewMode = 'matrix'; // 'matrix' | 'cards' | 'table'
+
+  // View mode switcher for friend timetable
+  function renderFriendActiveView() {
+    if (!activeFriendSchedule) return;
+
+    btnFriendToggleMatrix?.classList.toggle('active', activeFriendViewMode === 'matrix');
+    btnFriendToggleCards?.classList.toggle('active',  activeFriendViewMode === 'cards');
+    btnFriendToggleTable?.classList.toggle('active',  activeFriendViewMode === 'table');
+
+    friendWeeklyMatrixContainer?.classList.toggle('hidden', activeFriendViewMode !== 'matrix');
+    friendDayCardsWrapper?.classList.toggle('hidden',       activeFriendViewMode !== 'cards');
+    friendTableViewWrapper?.classList.toggle('hidden',       activeFriendViewMode !== 'table');
+
+    if (activeFriendViewMode === 'matrix') {
+      renderWeeklyMatrix(friendWeeklyMatrixGrid, activeFriendSchedule, { readOnly: true });
+    } else if (activeFriendViewMode === 'cards') {
+      renderDayCards(friendCalendarGrid, activeFriendSchedule, { readOnly: true });
+    } else if (activeFriendViewMode === 'table') {
+      renderReadOnlyTable(friendTableTbody, activeFriendSchedule);
+    }
+  }
+
+  btnFriendToggleMatrix?.addEventListener('click', () => {
+    activeFriendViewMode = 'matrix';
+    renderFriendActiveView();
+  });
+  btnFriendToggleCards?.addEventListener('click', () => {
+    activeFriendViewMode = 'cards';
+    renderFriendActiveView();
+  });
+  btnFriendToggleTable?.addEventListener('click', () => {
+    activeFriendViewMode = 'table';
+    renderFriendActiveView();
+  });
+
+  // Back to Find Friends button
+  friendBackBtn?.addEventListener('click', () => {
+    friendSchedWrap?.classList.add('hidden');
+    friendCompareResults?.classList.add('hidden');
+    activeFriendData = null;
+    activeFriendSchedule = null;
+    document.getElementById('friend-search-card')?.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  // Open Friend Timetable Viewer
+  async function openFriendTimetable(friend) {
+    if (!friend || !friend.id || !activeGroupId) return;
+
+    activeFriendData = { ...friend };
+    activeFriendSchedule = null;
+
+    // Reset and show timetable container
+    friendSchedWrap?.classList.remove('hidden');
+    friendCompareResults?.classList.add('hidden');
+
+    // Update friend profile banner
+    if (friendNameDisplay) friendNameDisplay.innerText = friend.name || 'Friend';
+    const initial = (friend.name || 'F').trim()[0].toUpperCase();
+    if (friendAvatarCircle) friendAvatarCircle.innerText = initial;
+
+    if (friendNicknamesBadge) {
+      if (friend.nicknames && friend.nicknames.length > 0) {
+        friendNicknamesBadge.innerText = `AKA: ${friend.nicknames.join(', ')}`;
+        friendNicknamesBadge.classList.remove('hidden');
+      } else {
+        friendNicknamesBadge.classList.add('hidden');
+      }
+    }
+
+    if (friendTimetableMeta) {
+      friendTimetableMeta.innerText = `Squad Member • Academic Schedule`;
+    }
+
+    // Set loading state
+    friendTimetableLoading?.classList.remove('hidden');
+    friendTimetableEmpty?.classList.add('hidden');
+    friendTimetableError?.classList.add('hidden');
+    friendWeeklyMatrixContainer?.classList.add('hidden');
+    friendDayCardsWrapper?.classList.add('hidden');
+    friendTableViewWrapper?.classList.add('hidden');
+    friendViewToggleBar?.classList.add('hidden');
+
+    if (friendTimetableStatus) {
+      friendTimetableStatus.innerText = 'Retrieving timetable…';
+      friendTimetableStatus.className = 'upload-status-tag';
+    }
+
+    try {
+      // 1. Authorization verification: ensure friend is an active squad member
+      const memberProfile = await getGroupProfile(activeGroupId, friend.id);
+      if (!memberProfile) {
+        throw new Error('This student is not a member of your active squad.');
+      }
+
+      // 2. Efficiently fetch this friend's timetable document from Firestore
+      const scheduleDoc = await getFriendSchedule(activeGroupId, friend.id);
+      friendTimetableLoading?.classList.add('hidden');
+
+      if (!scheduleDoc || !scheduleDoc.schedule || Object.keys(scheduleDoc.schedule).length === 0) {
+        // Friend has not uploaded a timetable yet
+        activeFriendSchedule = null;
+        activeFriendData.schedule = null;
+        if (friendTimetableStatus) {
+          friendTimetableStatus.innerText = 'No timetable uploaded';
+          friendTimetableStatus.className = 'upload-status-tag empty';
+        }
+        if (friendEmptyTitle) friendEmptyTitle.innerText = `${friend.name}'s Timetable`;
+        if (friendEmptyDesc) {
+          friendEmptyDesc.innerText = `${friend.name} has not uploaded a timetable for this squad yet. Once they upload it, their weekly classes will appear here automatically.`;
+        }
+        friendTimetableEmpty?.classList.remove('hidden');
+        return;
+      }
+
+      // 3. Timetable exists: store in memory (avoids repeated Firestore reads)
+      activeFriendSchedule = scheduleDoc.schedule;
+      activeFriendData.schedule = scheduleDoc.schedule;
+      activeFriendData.updatedAt = scheduleDoc.updatedAt || null;
+
+      let dateStr = 'Active';
+      if (scheduleDoc.updatedAt) {
+        const d = new Date(scheduleDoc.updatedAt);
+        dateStr = `Saved on: ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+      }
+      if (friendTimetableStatus) {
+        friendTimetableStatus.innerText = `✓ ${dateStr}`;
+        friendTimetableStatus.className = 'upload-status-tag';
+      }
+
+      friendViewToggleBar?.classList.remove('hidden');
+      renderFriendActiveView();
+      friendSchedWrap?.scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+      friendTimetableLoading?.classList.add('hidden');
+      if (friendTimetableErrorMsg) {
+        friendTimetableErrorMsg.innerText = `Could not load timetable: ${err.message}`;
+      }
+      friendTimetableError?.classList.remove('hidden');
+      if (friendTimetableStatus) {
+        friendTimetableStatus.innerText = 'Error loading timetable';
+        friendTimetableStatus.className = 'upload-status-tag empty';
+      }
+    }
+  }
+
+  // Execute Friend Search
+  async function executeFriendSearch(query = '') {
+    if (!activeGroupId) return;
+    const q = query.trim();
+    if (searchResultsDiv) {
+      searchResultsDiv.innerHTML = '<p style="color:var(--ink-muted); font-size:0.86rem; padding:8px 0;">Searching squad members…</p>';
+    }
+    friendSchedWrap?.classList.add('hidden');
+    friendCompareResults?.classList.add('hidden');
+
+    try {
+      const results = await searchGroupFriends(activeGroupId, q);
+      if (!searchResultsDiv) return;
+      searchResultsDiv.innerHTML = '';
+
+      if (results.length === 0) {
+        searchResultsDiv.innerHTML = '<p style="color:var(--ink-muted); font-size:0.88rem; padding:12px 0;">No squad members found matching that name.</p>';
+        return;
+      }
+
+      results.forEach(friend => {
+        const initial = (friend.name || 'F').trim()[0].toUpperCase();
+        const nicknamesText = (friend.nicknames && friend.nicknames.length > 0) ? friend.nicknames.join(', ') : '';
+        const isSelf = auth.currentUser && friend.id === auth.currentUser.uid;
+
+        const card = document.createElement('div');
+        card.className = 'squad-card';
+        card.style.display = 'flex';
+        card.style.justifyContent = 'space-between';
+        card.style.alignItems = 'center';
+        card.style.flexWrap = 'wrap';
+        card.style.gap = '12px';
+        card.style.padding = 'var(--space-4) var(--space-5)';
+        card.style.cursor = 'pointer';
+
+        card.innerHTML = `
+          <div style="display:flex; align-items:center; gap:var(--space-3);">
+            <div class="user-avatar-circle" style="background:linear-gradient(135deg, var(--forest), #123F30); width:42px; height:42px; font-size:1.05rem;">
+              ${initial}
+            </div>
+            <div class="info">
+              <h4 style="margin:0 0 2px 0; font-size:0.98rem; color:var(--ink); font-weight:700;">
+                ${friend.name} ${isSelf ? '<span style="font-size:0.75rem; color:var(--forest); font-weight:600;">(You)</span>' : ''}
+              </h4>
+              <p style="margin:0; font-size:0.8rem; color:var(--ink-muted);">
+                ${nicknamesText ? `AKA: ${nicknamesText} • ` : ''}Squad Member
+              </p>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn-primary btn-sm view-friend-btn" type="button" style="white-space:nowrap;">
+              📅 View Timetable &rarr;
+            </button>
+          </div>
+        `;
+
+        card.addEventListener('click', () => openFriendTimetable(friend));
+        searchResultsDiv.appendChild(card);
+      });
+    } catch (e) {
+      if (searchResultsDiv) {
+        searchResultsDiv.innerHTML = `<p style="color:var(--terracotta); padding:8px 0;">Error searching squad: ${e.message}</p>`;
+      }
+    }
+  }
 
   searchInput?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      searchBtn?.click();
+      executeFriendSearch(searchInput.value);
     }
   });
 
-  searchBtn?.addEventListener('click', async () => {
-    const q = searchInput.value.trim();
-    if (!q || !activeGroupId) return;
-    searchResultsDiv.innerHTML = '<p style="color:var(--ink-muted); font-size:0.86rem;">Searching squad members…</p>';
-    friendSchedWrap.classList.add('hidden');
-    friendCompareResults.classList.add('hidden');
-
-    try {
-      const results = await searchGroupFriends(activeGroupId, q);
-      searchResultsDiv.innerHTML = '';
-      if (results.length === 0) {
-        searchResultsDiv.innerHTML = '<p style="color:var(--ink-muted); font-size:0.88rem; padding:8px 0;">No squad members found matching that name.</p>';
-        return;
-      }
-      results.forEach(friend => {
-        const div = document.createElement('div');
-        div.className = 'squad-card';
-        div.style.cursor = 'pointer';
-        div.innerHTML = `
-          <div class="info">
-            <h4>${friend.name}</h4>
-            <p>${friend.schedule ? 'Timetable Available' : 'No schedule uploaded'}</p>
-          </div>
-          <span style="font-size:0.82rem; font-weight:700; color:var(--forest);">View Schedule &rarr;</span>
-        `;
-        div.addEventListener('click', () => {
-          activeFriendData = friend;
-          friendNameDisplay.innerText = friend.name;
-          friendSchedWrap.classList.remove('hidden');
-          friendCompareResults.classList.add('hidden');
-          renderDayCards(calendarGrid, friend.schedule);
-        });
-        searchResultsDiv.appendChild(div);
-      });
-    } catch (e) {
-      searchResultsDiv.innerHTML = `<p style="color:var(--terracotta);">Error searching: ${e.message}</p>`;
-    }
+  searchBtn?.addEventListener('click', () => {
+    executeFriendSearch(searchInput ? searchInput.value : '');
   });
 
   // 1-on-1 Free Time Compare Button
   compareFriendBtn?.addEventListener('click', () => {
-    if (!activeFriendData || !currentUserSchedule) {
-      alert('Both you and your friend must have uploaded timetables to compare.');
+    if (!currentUserSchedule) {
+      alert('You have not uploaded your timetable yet. Please upload your timetable in "My Timetable" first.');
+      return;
+    }
+    if (!activeFriendData || !activeFriendSchedule) {
+      alert(`${activeFriendData?.name || 'This friend'} has not uploaded a timetable yet.`);
       return;
     }
 
     const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    if (activeFriendSchedule['Sunday'] || currentUserSchedule['Sunday']) {
+      dayOrder.push('Sunday');
+    }
+
     const pair = [
       { name: 'You', schedule: currentUserSchedule },
-      { name: activeFriendData.name, schedule: activeFriendData.schedule }
+      { name: activeFriendData.name, schedule: activeFriendSchedule }
     ];
 
     let html = `<h4 style="font-family:var(--font-serif); font-size:1.15rem; margin-bottom:12px; color:var(--forest-dark);">

@@ -719,15 +719,16 @@
 
 
       <!-- ====================================================
-           VIEW 3: FIND A FRIEND & COMPARE
+           VIEW 3: FIND A FRIEND & TIMETABLE VIEWER
       ==================================================== -->
       <section id="find-view" class="view">
         <div class="page-header">
           <h1>Find Friends</h1>
-          <p>Search squad members, view their shared schedules, and find 1-on-1 free time.</p>
+          <p>Search squad members, view their complete weekly timetables, and find 1-on-1 free time.</p>
         </div>
 
-        <div class="card">
+        <!-- Friend Search Section Card -->
+        <div class="card" id="friend-search-card">
           <div class="search-bar-wrap">
             <svg class="search-bar-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input type="text" id="search-input" placeholder="Search friends by name or nickname…" />
@@ -736,19 +737,99 @@
           <div id="search-results" style="display:flex; flex-direction:column; gap:8px; margin-top:var(--space-5);"></div>
         </div>
 
-        <!-- Friend Schedule Display Area -->
+        <!-- Friend Timetable Display Area -->
         <div id="friend-schedule-container" class="card hidden">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:var(--space-3); margin-bottom:var(--space-5);">
-            <h3 id="friend-name-display">Timetable for <span></span></h3>
+          <!-- Top Action Bar -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:var(--space-3); margin-bottom:var(--space-4); padding-bottom:var(--space-4); border-bottom:1px solid var(--border);">
+            <button id="friend-back-btn" class="btn-secondary btn-sm" type="button" style="display:inline-flex; align-items:center; gap:6px;">
+              ← Back to Find Friends
+            </button>
             <button id="compare-friend-btn" class="btn-primary btn-sm" style="background:var(--terracotta);">
               ⚡ Compare Free Time with Me
             </button>
           </div>
 
+          <!-- Friend Profile Summary Header -->
+          <div id="friend-profile-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:var(--space-4); margin-bottom:var(--space-4);">
+            <div style="display:flex; align-items:center; gap:var(--space-3);">
+              <div id="friend-avatar-circle" class="user-avatar-circle" style="width:46px; height:46px; font-size:1.15rem; background:linear-gradient(135deg, var(--forest), var(--forest-dark));">F</div>
+              <div>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <h2 id="friend-name-display" style="font-size:1.3rem; margin:0; color:var(--ink);">Friend Timetable</h2>
+                  <span id="friend-nicknames-badge" class="room-pill hidden"></span>
+                </div>
+                <p id="friend-timetable-meta" style="font-size:0.8rem; color:var(--ink-muted); margin-top:2px; margin-bottom:0;">
+                  Squad Member • Academic Schedule
+                </p>
+              </div>
+            </div>
+
+            <!-- View Mode Switcher -->
+            <div id="friend-view-toggle-bar" class="timetable-view-toggle" style="margin-bottom:0;">
+              <button class="view-toggle-btn active" id="btn-friend-toggle-matrix" type="button">Weekly Matrix</button>
+              <button class="view-toggle-btn" id="btn-friend-toggle-cards" type="button">Day Cards</button>
+              <button class="view-toggle-btn" id="btn-friend-toggle-table" type="button">Table View</button>
+            </div>
+          </div>
+
+          <!-- Status & Read-Only Badge -->
+          <div style="margin-bottom:var(--space-4); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+            <p id="friend-timetable-status" class="upload-status-tag" style="margin:0;">Active Timetable</p>
+            <span style="font-size:0.75rem; color:var(--ink-muted); background:var(--canvas-subtle); padding:3px 10px; border-radius:var(--r-pill); border:1px solid var(--border); font-weight:600;">
+              🔒 Strictly Read-Only
+            </span>
+          </div>
+
+          <!-- Loading state -->
+          <div id="friend-timetable-loading" class="hidden" style="padding:3rem 1rem; text-align:center;">
+            <div class="spinner" style="margin:0 auto 12px auto;"></div>
+            <p style="color:var(--ink-muted); font-size:0.9rem;">Retrieving friend's timetable from squad…</p>
+          </div>
+
+          <!-- Error / Permission Denied State -->
+          <div id="friend-timetable-error" class="hidden" style="padding:1.5rem; text-align:center; background:var(--terracotta-subtle); border-radius:var(--r-md); border:1px solid var(--border); margin-bottom:var(--space-4);">
+            <p id="friend-timetable-error-msg" style="color:var(--terracotta); font-weight:600; margin:0;"></p>
+          </div>
+
+          <!-- Empty state when friend has no timetable uploaded -->
+          <div id="friend-timetable-empty" class="hidden" style="padding:3rem 1.5rem; text-align:center; background:var(--surface-warm); border-radius:var(--r-lg); border:1px dashed var(--border); margin-bottom:var(--space-4);">
+            <div style="font-size:2.4rem; margin-bottom:8px;">🗓️</div>
+            <h4 id="friend-empty-title" style="font-size:1.15rem; margin-bottom:6px; color:var(--ink);">No Timetable Uploaded</h4>
+            <p id="friend-empty-desc" style="color:var(--ink-muted); font-size:0.88rem; max-width:480px; margin:0 auto;">
+              This squad member has not uploaded their timetable yet.
+            </p>
+          </div>
+
           <!-- 1-on-1 Compare Results Banner (Dynamically generated) -->
           <div id="friend-compare-results" class="hidden" style="margin-bottom:var(--space-6); padding:var(--space-5); background:var(--surface-warm); border:1px solid var(--border); border-radius:var(--r-lg);"></div>
 
-          <div id="calendar-grid" class="day-cards-container"></div>
+          <!-- VIEW A: Weekly Matrix -->
+          <div id="friend-weekly-matrix-container" class="weekly-matrix-wrapper">
+            <div class="weekly-matrix" id="friend-weekly-matrix-grid"></div>
+          </div>
+
+          <!-- VIEW B: Day Cards -->
+          <div id="friend-day-cards-wrapper" class="day-cards-container hidden">
+            <div id="friend-calendar-grid"></div>
+          </div>
+
+          <!-- VIEW C: Table View (Read-Only) -->
+          <div id="friend-table-view-wrapper" class="preview-table-wrapper hidden" style="margin-top:var(--space-2);">
+            <table class="preview-table">
+              <thead>
+                <tr>
+                  <th>Day</th>
+                  <th>Start Time</th>
+                  <th>End Time</th>
+                  <th>Subject / Course</th>
+                  <th>Type</th>
+                  <th>Room</th>
+                  <th>Batch</th>
+                </tr>
+              </thead>
+              <tbody id="friend-table-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </section>
 

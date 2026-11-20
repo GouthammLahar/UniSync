@@ -215,8 +215,8 @@ export async function getAllGroupStudents(groupId) {
   return results.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function searchGroupFriends(groupId, searchQuery) {
-  const qLower = searchQuery.toLowerCase().trim();
+export async function searchGroupFriends(groupId, searchQuery = '') {
+  const qLower = (searchQuery || '').toLowerCase().trim();
   const membersSnap = await getDocs(collection(db, "groups", groupId, "members"));
   
   const results = [];
@@ -225,17 +225,18 @@ export async function searchGroupFriends(groupId, searchQuery) {
     if (!data.name) continue;
     
     let matches = false;
-    if (data.nameLower && data.nameLower.includes(qLower)) matches = true;
-    if (data.nicknames && data.nicknames.some(n => n.includes(qLower))) matches = true;
+    if (!qLower) {
+      matches = true;
+    } else {
+      if (data.nameLower && data.nameLower.includes(qLower)) matches = true;
+      if (data.nicknames && data.nicknames.some(n => n.includes(qLower))) matches = true;
+    }
     
     if (matches) {
-       // Attach schedule
-       const sSnap = await getDoc(doc(db, "groups", groupId, "schedules", mDoc.id));
-       const sched = sSnap.exists() ? sSnap.data().schedule : null;
-       results.push({ id: mDoc.id, ...data, schedule: sched });
+      results.push({ id: mDoc.id, ...data });
     }
   }
-  return results;
+  return results.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function getGroupSquadStatus(groupId, day, timeQuery) {

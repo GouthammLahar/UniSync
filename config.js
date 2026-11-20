@@ -7,6 +7,3 @@ export const firebaseConfig = {
   appId: "1:214136330464:web:8f6c75a8e8b1ecb2e71885",
   measurementId: "G-YV514LK241"
 };
-export const geminiApiKey = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY)
-  ? import.meta.env.VITE_GEMINI_API_KEY
-  : (typeof window !== 'undefined' && window.__GEMINI_API_KEY__ ? window.__GEMINI_API_KEY__ : '');

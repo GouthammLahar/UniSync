@@ -12,7 +12,7 @@
     <link rel="icon" type="image/png" href="./logo.png" />
     <link rel="apple-touch-icon" href="./logo.png" />
     <title>UniSync — Different schedules. Shared moments.</title>
-    <meta name="description" content="Discover when your university friends are free. Import timetables via AI or Excel, form private campus squads, and uncover shared moments effortlessly." />
+    <meta name="description" content="Discover when your university friends are free. Import timetables via Excel or manual entry, form private campus squads, and uncover shared moments effortlessly." />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
@@ -150,7 +150,7 @@
             <em>Your time together doesn't have to.</em>
           </h1>
           <p class="hero-subtitle">
-            UniSync connects university students across different batches, departments, and staggered periods. Import your timetable with AI vision or Excel, form private campus squads, and discover the exact minutes when everyone is free.
+            UniSync connects university students across different batches, departments, and staggered periods. Import your timetable via Excel or manual entry, form private campus squads, and discover the exact minutes when everyone is free.
           </p>
           <div class="hero-actions">
             <button id="hero-google-btn" class="btn-primary btn-lg">
@@ -317,8 +317,8 @@
           <div class="editorial-grid-3">
             <div class="editorial-card">
               <div class="card-num">Step 1</div>
-              <h3>Import Any Timetable</h3>
-              <p>Take a quick photo of your college timetable or upload your Excel sheet. Our AI extracts period headers, 50-minute blocks, subjects, and rooms with interactive review.</p>
+              <h3>Import Your Timetable</h3>
+              <p>Upload your Excel sheet or enter classes manually. The interactive review table lets you verify, edit, or add any class before saving to your profile.</p>
             </div>
             <div class="editorial-card">
               <div class="card-num">Step 2</div>
@@ -338,10 +338,9 @@
           <div class="dual-split-section">
             <div class="dual-split-content">
               <span class="section-tag">Universal Ingestion</span>
-              <h2>AI Vision Scanner &amp; Native Excel Parser</h2>
-              <p>Whether your university provides an official Excel sheet or a printed schedule on the department notice board, UniSync imports it in seconds.</p>
+              <h2>Native Excel Parser &amp; Manual Timetable Builder</h2>
+              <p>Whether your university provides an official Excel sheet or you prefer to enter your schedule manually, UniSync imports it in seconds.</p>
               <ul class="feature-checklist">
-                <li><strong>Gemini Vision AI:</strong> High-precision OCR trained to read table column headers (08:30–09:20, 08:20–09:10, 09:00–10:00).</li>
                 <li><strong>SheetJS Integration:</strong> Direct .xlsx / .xls parsing without manual transcription.</li>
                 <li><strong>Interactive Review Table:</strong> Edit any detected room, timing, or subject on screen before saving.</li>
                 <li><strong>Manual Class Builder:</strong> Add or modify single periods anytime as semesters shift.</li>
@@ -349,8 +348,7 @@
             </div>
             <div class="interactive-mockup">
               <div class="mockup-tab-bar">
-                <span class="mockup-tab active">AI Vision Review</span>
-                <span class="mockup-tab">Excel Parse</span>
+                <span class="mockup-tab active">Excel Parse</span>
                 <span class="mockup-tab">Manual Edit</span>
               </div>
               <div style="background:var(--canvas); border-radius:var(--r-md); padding:16px; border:1px solid var(--border);">
@@ -423,11 +421,11 @@
 
             <div class="faq-item">
               <button class="faq-question">
-                <span>How accurate is the AI timetable photo scanner?</span>
+                <span>How do I import my timetable?</span>
                 <span class="faq-arrow">+</span>
               </button>
               <div class="faq-answer">
-                <p>UniSync uses Gemini Vision AI configured to read period column headers and trace day rows. After scanning, it presents an interactive review table where you can verify, edit, or add any class in seconds before saving to your profile.</p>
+                <p>UniSync supports two import methods: upload your official timetable as an Excel (.xlsx) file, which is instantly parsed by our SheetJS integration, or enter your classes manually using the built-in class builder. After importing, an interactive review table lets you verify, edit, or add any class before saving to your profile.</p>
               </div>
             </div>
 
@@ -485,7 +483,7 @@
             </div>
             <div>
               <h4 style="font-size:0.9rem; margin-bottom:8px;">Platform</h4>
-              <p style="font-size:0.85rem;"><a href="#features">AI Timetable Scan</a></p>
+              <p style="font-size:0.85rem;"><a href="#features">Excel Timetable Import</a></p>
               <p style="font-size:0.85rem;"><a href="#free-time-engine">Free-Time Discovery</a></p>
               <p style="font-size:0.85rem;"><a href="#how-it-works">Squad Collaboration</a></p>
             </div>
@@ -604,42 +602,13 @@
 
           <!-- ── Import Form Area (Hidden when schedule exists, toggleable) ── -->
           <div id="upload-form" class="hidden" style="margin-bottom:var(--space-8); padding-bottom:var(--space-6); border-bottom:1px solid var(--border);">
-            <div class="upload-tabs" id="upload-tabs">
-              <button class="upload-tab active" id="tab-excel" data-tab="excel">
-                <span>📊</span> Upload Excel (.xlsx)
-              </button>
-              <button class="upload-tab" id="tab-ai" data-tab="ai">
-                <span>✨</span> Scan Image with AI
-              </button>
-            </div>
 
-            <!-- Excel Tab -->
+            <!-- Excel Drop Zone -->
             <div id="tab-panel-excel" class="tab-panel">
               <div class="file-drop-area" id="file-drop-area">
                 <span class="drop-icon">📊</span>
                 <span class="drop-text">Drag &amp; drop your timetable file (.xlsx)<br><small style="color:var(--ink-muted);">or click to browse from device</small></span>
                 <input type="file" id="timetable-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
-              </div>
-            </div>
-
-            <!-- AI Scan Tab -->
-            <div id="tab-panel-ai" class="tab-panel hidden">
-              <div class="file-drop-area" id="image-drop-area">
-                <span class="drop-icon">📷</span>
-                <span class="drop-text">Upload a clear photo or screenshot of your timetable<br><small style="color:var(--ink-muted);">PNG or JPG • Gemini Vision AI will parse period headers &amp; rooms</small></span>
-                <input type="file" id="timetable-image" accept="image/png,image/jpeg,image/webp,image/jpg" />
-              </div>
-              <div id="image-preview-wrap" class="hidden" style="margin-top:var(--space-4);">
-                <div class="image-preview-box" style="position:relative; max-width:320px; margin:0 auto; border-radius:var(--r-md); overflow:hidden; border:1px solid var(--border);">
-                  <img id="image-preview-thumb" src="" alt="Screenshot Preview" style="width:100%; display:block;" />
-                  <div style="padding:8px; background:var(--surface); display:flex; justify-content:space-between; align-items:center;">
-                    <span id="image-preview-filename" style="font-size:0.75rem; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:180px;"></span>
-                    <button id="change-image-btn" class="btn-secondary btn-sm" style="font-size:0.75rem; padding:2px 8px; min-height:26px;">Change</button>
-                  </div>
-                </div>
-                <button id="scan-image-btn" class="btn-primary" style="margin-top:var(--space-4); width:100%;">
-                  ✨ Scan Image with Gemini AI
-                </button>
               </div>
             </div>
 

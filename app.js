@@ -6,7 +6,6 @@ import {
   getFriendSchedule, getAllGroupStudents, searchGroupFriends, getGroupSquadStatus, getGroupMemberCount
 } from './db.js?v=10';
 import { parseLpuExcel } from './timetable-parser.js?v=10';
-import { scanTimetableImage } from './api.js?v=10';
 import {
   normaliseTime,
   timeToMinutes,
@@ -1026,11 +1025,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   /* =========================================================
-     4. EXCEL UPLOAD & AI SCAN WITH EDITABLE REVIEW
+     4. EXCEL UPLOAD WITH EDITABLE REVIEW
   ========================================================= */
-  const tabBtns          = document.querySelectorAll('.upload-tab');
-  const tabExcel         = document.getElementById('tab-panel-excel');
-  const tabAI            = document.getElementById('tab-panel-ai');
   const fileDropArea     = document.getElementById('file-drop-area');
   const fileInput        = document.getElementById('timetable-file');
   const uploadStatus     = document.getElementById('upload-status');
@@ -1041,31 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const reuploadBtn      = document.getElementById('reupload-btn');
   const addClassBtn      = document.getElementById('add-class-btn');
 
-  const imageDropArea    = document.getElementById('image-drop-area');
-  const imageInput       = document.getElementById('timetable-image');
-  const imagePreviewWrap = document.getElementById('image-preview-wrap');
-  const imagePreviewThumb= document.getElementById('image-preview-thumb');
-  const imageFilename    = document.getElementById('image-preview-filename');
-  const changeImageBtn   = document.getElementById('change-image-btn');
-  const scanImageBtn     = document.getElementById('scan-image-btn');
-
   let workingParsedClasses = [];
-  let selectedImageFile    = null;
-
-  function switchUploadTab(tab) {
-    tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-    if (tab === 'excel') {
-      tabExcel.classList.remove('hidden');
-      tabAI.classList.add('hidden');
-    } else {
-      tabExcel.classList.add('hidden');
-      tabAI.classList.remove('hidden');
-    }
-    uploadStatus.classList.add('hidden');
-    previewPanel.classList.add('hidden');
-    workingParsedClasses = [];
-  }
-  tabBtns.forEach(btn => btn.addEventListener('click', () => switchUploadTab(btn.dataset.tab)));
 
   function resetUploadUI() {
     if (previewPanel)  previewPanel.classList.add('hidden');
@@ -1073,18 +1045,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fileDropArea)  fileDropArea.classList.remove('hidden');
     if (fileInput)     fileInput.value = '';
     workingParsedClasses = [];
-    resetAITab();
-  }
-
-  function resetAITab() {
-    if (imageDropArea)    imageDropArea.classList.remove('hidden');
-    if (imagePreviewWrap) imagePreviewWrap.classList.add('hidden');
-    if (imageInput)       imageInput.value = '';
-    selectedImageFile = null;
-    if (scanImageBtn) {
-      scanImageBtn.disabled = false;
-      scanImageBtn.innerHTML = '✨ Scan Image with Gemini AI';
-    }
   }
 
   function renderEditablePreviewTable(classesList) {
@@ -1230,56 +1190,6 @@ document.addEventListener('DOMContentLoaded', () => {
       fileDropArea.classList.remove('hidden');
     }
   }
-
-  // Image Upload Handlers
-  imageDropArea?.addEventListener('dragover', (e) => { e.preventDefault(); imageDropArea.classList.add('drag-over'); });
-  imageDropArea?.addEventListener('dragleave', () => imageDropArea.classList.remove('drag-over'));
-  imageDropArea?.addEventListener('drop', (e) => {
-    e.preventDefault();
-    imageDropArea.classList.remove('drag-over');
-    const f = e.dataTransfer.files[0];
-    if (f && f.type.startsWith('image/')) showImagePreview(f);
-  });
-  imageDropArea?.addEventListener('click', (e) => { if (e.target !== imageInput) imageInput.click(); });
-  imageInput?.addEventListener('change', () => { if (imageInput.files[0]) showImagePreview(imageInput.files[0]); });
-
-  function showImagePreview(file) {
-    selectedImageFile = file;
-    imagePreviewThumb.src = URL.createObjectURL(file);
-    imageFilename.textContent = file.name;
-    imageDropArea.classList.add('hidden');
-    imagePreviewWrap.classList.remove('hidden');
-    previewPanel.classList.add('hidden');
-  }
-  changeImageBtn?.addEventListener('click', resetAITab);
-
-  scanImageBtn?.addEventListener('click', async () => {
-    if (!selectedImageFile) return;
-    scanImageBtn.disabled = true;
-    scanImageBtn.innerHTML = '<div class="spinner"></div> Scanning Image with Gemini AI…';
-    uploadStatus.classList.remove('hidden');
-    timetableStatusText.innerText = 'Analyzing period column headers and days… this takes 10–25s.';
-    previewPanel.classList.add('hidden');
-
-    try {
-      const result = await scanTimetableImage(selectedImageFile);
-      if (!result.classes || result.classes.length === 0) {
-        timetableStatusText.innerText = 'No classes detected. Please try a clearer screenshot.';
-        scanImageBtn.disabled = false;
-        scanImageBtn.innerText = '✨ Retry AI Scan';
-        return;
-      }
-      renderEditablePreviewTable(result.classes);
-      uploadStatus.classList.add('hidden');
-      previewPanel.classList.remove('hidden');
-      scanImageBtn.disabled = false;
-      scanImageBtn.innerText = '✨ Scan Image with Gemini AI';
-    } catch (err) {
-      timetableStatusText.innerText = 'Scan error: ' + err.message;
-      scanImageBtn.disabled = false;
-      scanImageBtn.innerText = '✨ Retry AI Scan';
-    }
-  });
 
   reuploadBtn?.addEventListener('click', resetUploadUI);
 

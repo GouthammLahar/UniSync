@@ -880,10 +880,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ── FULL SCHEDULE TABLE EDITOR ─────────────────────────────────────────────
+  const VALID_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  function canonicalDay(d) {
+    if (!d) return null;
+    const s = String(d).trim().toLowerCase();
+    const match = VALID_DAYS.find(vd => vd.toLowerCase() === s);
+    if (match) return match;
+    const abbrev = {
+      mon: 'Monday', tue: 'Tuesday', tues: 'Tuesday', wed: 'Wednesday', weds: 'Wednesday',
+      thu: 'Thursday', thur: 'Thursday', thurs: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday'
+    };
+    return abbrev[s] || null;
+  }
+
   function renderTableEditor(scheduleMap) {
     if (!tableEditorTbody) return;
     tableEditorTbody.innerHTML = '';
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const days = VALID_DAYS;
 
     let allRows = [];
     if (scheduleMap) {
@@ -892,14 +905,16 @@ document.addEventListener('DOMContentLoaded', () => {
           Object.entries(scheduleMap[day]).forEach(([slotKey, data]) => {
             if (data.status === 'busy') {
               const [startT, endT] = slotKey.split(' - ');
+              const rawType = data.type || data.classType || 'L';
+              const type = rawType.toUpperCase().startsWith('P') ? 'P' : (rawType.toUpperCase().startsWith('T') ? 'T' : 'L');
               allRows.push({
                 day,
-                startTime: data.startTime || startT,
-                endTime: data.endTime || endT,
-                subject: data.subject || '',
-                type: data.type || 'L',
+                startTime: normaliseTime(data.startTime || data.start || startT),
+                endTime: normaliseTime(data.endTime || data.end || endT),
+                subject: data.subject || data.courseCode || data.course || data.code || '',
+                type,
                 room: data.room || '',
-                batch: data.batch || ''
+                batch: data.batch || data.group || data.section || ''
               });
             }
           });
@@ -921,30 +936,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function appendTableEditorRow(data = {}) {
     const tr = document.createElement('tr');
+    const startVal = normaliseTime(data.startTime || data.start) || '08:30';
+    const endVal = normaliseTime(data.endTime || data.end) || '09:20';
+    const subjVal = data.subject || data.courseCode || data.course || data.code || '';
+    const rawType = data.type || data.classType || 'L';
+    const typeVal = rawType.toUpperCase().startsWith('P') ? 'P' : (rawType.toUpperCase().startsWith('T') ? 'T' : 'L');
+    const roomVal = data.room || '';
+    const batchVal = data.batch || data.group || data.section || '';
+    const dayVal = data.day || 'Monday';
+
     tr.innerHTML = `
       <td>
         <select class="table-row-day">
-          <option value="Monday" ${data.day === 'Monday' ? 'selected' : ''}>Monday</option>
-          <option value="Tuesday" ${data.day === 'Tuesday' ? 'selected' : ''}>Tuesday</option>
-          <option value="Wednesday" ${data.day === 'Wednesday' ? 'selected' : ''}>Wednesday</option>
-          <option value="Thursday" ${data.day === 'Thursday' ? 'selected' : ''}>Thursday</option>
-          <option value="Friday" ${data.day === 'Friday' ? 'selected' : ''}>Friday</option>
-          <option value="Saturday" ${data.day === 'Saturday' ? 'selected' : ''}>Saturday</option>
-          <option value="Sunday" ${data.day === 'Sunday' ? 'selected' : ''}>Sunday</option>
+          <option value="Monday" ${dayVal === 'Monday' ? 'selected' : ''}>Monday</option>
+          <option value="Tuesday" ${dayVal === 'Tuesday' ? 'selected' : ''}>Tuesday</option>
+          <option value="Wednesday" ${dayVal === 'Wednesday' ? 'selected' : ''}>Wednesday</option>
+          <option value="Thursday" ${dayVal === 'Thursday' ? 'selected' : ''}>Thursday</option>
+          <option value="Friday" ${dayVal === 'Friday' ? 'selected' : ''}>Friday</option>
+          <option value="Saturday" ${dayVal === 'Saturday' ? 'selected' : ''}>Saturday</option>
+          <option value="Sunday" ${dayVal === 'Sunday' ? 'selected' : ''}>Sunday</option>
         </select>
       </td>
-      <td><input type="time" class="table-row-start" value="${normaliseTime(data.startTime) || '08:30'}" required /></td>
-      <td><input type="time" class="table-row-end" value="${normaliseTime(data.endTime) || '09:20'}" required /></td>
-      <td><input type="text" class="table-row-subj" value="${data.subject || ''}" placeholder="Course Code" required /></td>
+      <td><input type="time" class="table-row-start" value="${startVal}" required /></td>
+      <td><input type="time" class="table-row-end" value="${endVal}" required /></td>
+      <td><input type="text" class="table-row-subj" value="${subjVal}" placeholder="Course Code" required /></td>
       <td>
         <select class="table-row-type">
-          <option value="L" ${data.type === 'L' ? 'selected' : ''}>Lecture</option>
-          <option value="T" ${data.type === 'T' ? 'selected' : ''}>Tutorial</option>
-          <option value="P" ${data.type === 'P' ? 'selected' : ''}>Practical / Lab</option>
+          <option value="L" ${typeVal === 'L' ? 'selected' : ''}>Lecture</option>
+          <option value="T" ${typeVal === 'T' ? 'selected' : ''}>Tutorial</option>
+          <option value="P" ${typeVal === 'P' ? 'selected' : ''}>Practical / Lab</option>
         </select>
       </td>
-      <td><input type="text" class="table-row-room" value="${data.room || ''}" placeholder="e.g. 36-809" /></td>
-      <td><input type="text" class="table-row-batch" value="${data.batch || ''}" placeholder="e.g. 323MB" /></td>
+      <td><input type="text" class="table-row-room" value="${roomVal}" placeholder="e.g. 36-809" /></td>
+      <td><input type="text" class="table-row-batch" value="${batchVal}" placeholder="e.g. 323MB" /></td>
       <td style="text-align:center;">
         <button type="button" class="btn-remove-row" title="Remove this class">✕</button>
       </td>
@@ -961,35 +985,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (tableEditorSaveBtn) {
     tableEditorSaveBtn.addEventListener('click', async () => {
-      if (!activeGroupId) return;
+      if (!activeGroupId) {
+        alert('Please select or join a campus squad first before saving your timetable.');
+        return;
+      }
       const rows = tableEditorTbody.querySelectorAll('tr');
       const newSchedule = {};
-
+      let validClassCount = 0;
       let hasErrors = false;
-      rows.forEach(tr => {
-        const day   = tr.querySelector('.table-row-day')?.value;
-        const start = normaliseTime(tr.querySelector('.table-row-start')?.value);
-        const end   = normaliseTime(tr.querySelector('.table-row-end')?.value);
-        const subj  = tr.querySelector('.table-row-subj')?.value.trim();
-        const type  = tr.querySelector('.table-row-type')?.value || 'L';
-        const room  = tr.querySelector('.table-row-room')?.value.trim() || '';
-        const batch = tr.querySelector('.table-row-batch')?.value.trim() || '';
 
-        if (!subj) return; // skip completely empty rows
+      for (let i = 0; i < rows.length; i++) {
+        const tr = rows[i];
+        const rawDay = (tr.querySelector('.table-row-day')?.value || '').trim();
+        const day   = canonicalDay(rawDay);
+        const rawStart = (tr.querySelector('.table-row-start')?.value || '').trim();
+        const rawEnd   = (tr.querySelector('.table-row-end')?.value || '').trim();
+        const start = normaliseTime(rawStart);
+        const end   = normaliseTime(rawEnd);
+        const subj  = (tr.querySelector('.table-row-subj')?.value || '').trim();
+        const rawType = tr.querySelector('.table-row-type')?.value || 'L';
+        const type  = rawType.toUpperCase().startsWith('P') ? 'P' : (rawType.toUpperCase().startsWith('T') ? 'T' : 'L');
+        const room  = (tr.querySelector('.table-row-room')?.value || '').trim();
+        const batch = (tr.querySelector('.table-row-batch')?.value || '').trim();
+
+        // Skip completely empty rows
+        if (!subj && !room && !batch) continue;
+
+        if (!day) {
+          alert(`Row ${i + 1}: Invalid weekday "${rawDay}". Must be Monday through Sunday.`);
+          hasErrors = true;
+          break;
+        }
+
+        if (!subj) {
+          alert(`Row ${i + 1} (${day}): Please enter a course code / subject name.`);
+          hasErrors = true;
+          break;
+        }
 
         if (!start || !end) {
+          alert(`Row ${i + 1} (${subj} on ${day}): Please provide valid start and end times.`);
           hasErrors = true;
-          return;
+          break;
         }
 
         if (timeToMinutes(end) <= timeToMinutes(start)) {
-          alert(`Invalid time for ${subj} on ${day}: End Time must be after Start Time.`);
+          alert(`Invalid time for ${subj} on ${day}: End Time (${end}) must be after Start Time (${start}).`);
           hasErrors = true;
-          return;
+          break;
         }
 
         if (!newSchedule[day]) newSchedule[day] = {};
-        const slotKey = `${start} - ${end}`;
+        let slotKey = `${start} - ${end}`;
+        if (newSchedule[day][slotKey]) {
+          slotKey = `${start} - ${end}|${batch || validClassCount}`;
+        }
         newSchedule[day][slotKey] = {
           status: 'busy',
           subject: subj,
@@ -1000,9 +1050,15 @@ document.addEventListener('DOMContentLoaded', () => {
           startTime: start,
           endTime: end
         };
-      });
+        validClassCount++;
+      }
 
       if (hasErrors) return;
+
+      if (validClassCount === 0 || Object.keys(newSchedule).length === 0) {
+        alert('Please add at least one valid class before saving.');
+        return;
+      }
 
       tableEditorSaveBtn.disabled = true;
       tableEditorSaveBtn.innerText = 'Saving…';
@@ -1109,7 +1165,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (manualClassForm) {
     manualClassForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (!activeGroupId) return;
+      if (!activeGroupId) {
+        alert('Please select or join a campus squad first before adding a class.');
+        return;
+      }
 
       const origDay   = document.getElementById('modal-edit-original-day').value;
       const origSlot  = document.getElementById('modal-edit-original-slot').value;
@@ -1118,7 +1177,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const startTime = normaliseTime(document.getElementById('modal-class-start').value);
       const endTime   = normaliseTime(document.getElementById('modal-class-end').value);
       const subject   = document.getElementById('modal-class-subject').value.trim();
-      const type      = document.getElementById('modal-class-type').value;
+      const rawType   = document.getElementById('modal-class-type').value;
+      const type      = rawType.toUpperCase().startsWith('P') ? 'P' : (rawType.toUpperCase().startsWith('T') ? 'T' : 'L');
       const room      = document.getElementById('modal-class-room').value.trim();
       const batch     = document.getElementById('modal-class-batch').value.trim();
 
@@ -1186,8 +1246,61 @@ document.addEventListener('DOMContentLoaded', () => {
     workingParsedClasses = [];
   }
 
+  function harvestPreviewRows() {
+    if (!previewTbody) return [];
+    const trs = previewTbody.querySelectorAll('tr');
+    const harvested = [];
+    trs.forEach((tr) => {
+      const dayEl   = tr.querySelector('.preview-day');
+      const startEl = tr.querySelector('.preview-start');
+      const endEl   = tr.querySelector('.preview-end');
+      const subjEl  = tr.querySelector('.preview-subject');
+      const typeEl  = tr.querySelector('.preview-type');
+      const roomEl  = tr.querySelector('.preview-room');
+      const batchEl = tr.querySelector('.preview-batch');
+
+      // If empty state placeholder row, ignore
+      if (!subjEl) return;
+
+      const day       = (dayEl ? dayEl.value : 'Monday').trim();
+      const startTime = (startEl ? startEl.value : '').trim();
+      const endTime   = (endEl ? endEl.value : '').trim();
+      const subject   = (subjEl ? subjEl.value : '').trim();
+      const rawType   = (typeEl ? typeEl.value : 'L').trim();
+      const type      = rawType.toUpperCase().startsWith('P') ? 'P' : (rawType.toUpperCase().startsWith('T') ? 'T' : 'L');
+      const room      = (roomEl ? roomEl.value : '').trim();
+      const batch     = (batchEl ? batchEl.value : '').trim();
+
+      harvested.push({
+        day,
+        startTime,
+        endTime,
+        subject,
+        type,
+        typeLabel: type === 'P' ? 'Practical' : (type === 'T' ? 'Tutorial' : 'Lecture'),
+        room,
+        batch
+      });
+    });
+    return harvested;
+  }
+
   function renderEditablePreviewTable(classesList) {
-    workingParsedClasses = classesList || [];
+    workingParsedClasses = (classesList || []).map(cls => {
+      const rawType = cls.type || cls.classType || 'L';
+      const type = rawType.toUpperCase().startsWith('P') ? 'P' : (rawType.toUpperCase().startsWith('T') ? 'T' : 'L');
+      return {
+        day: cls.day || cls.dayOfWeek || 'Monday',
+        startTime: cls.startTime || cls.start || '',
+        endTime: cls.endTime || cls.end || '',
+        subject: cls.subject || cls.courseCode || cls.course || cls.code || '',
+        type,
+        typeLabel: cls.typeLabel || (type === 'P' ? 'Practical' : (type === 'T' ? 'Tutorial' : 'Lecture')),
+        room: cls.room || '',
+        batch: cls.batch || cls.group || cls.section || ''
+      };
+    });
+
     previewTbody.innerHTML = '';
     const dayOptions = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const typeOptions = [
@@ -1198,13 +1311,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!workingParsedClasses || workingParsedClasses.length === 0) {
       previewTbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:16px; color:var(--ink-muted);">No classes detected. Click "+ Add Class Row" to add one manually.</td></tr>`;
-      previewMeta.innerText = '0 classes parsed';
+      if (previewMeta) previewMeta.innerText = '0 classes parsed';
       return;
     }
 
     workingParsedClasses.forEach((cls, idx) => {
       const tr = document.createElement('tr');
       tr.dataset.index = idx;
+      const curType = cls.type === 'P' ? 'P' : (cls.type === 'T' ? 'T' : 'L');
       tr.innerHTML = `
         <td>
           <select class="preview-input preview-day" data-idx="${idx}" style="min-width:105px;">
@@ -1222,7 +1336,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </td>
         <td>
           <select class="preview-input preview-type" data-idx="${idx}" style="min-width:95px;">
-            ${typeOptions.map(t => `<option value="${t.val}" ${t.val === (cls.type || 'L') ? 'selected' : ''}>${t.label}</option>`).join('')}
+            ${typeOptions.map(t => `<option value="${t.val}" ${t.val === curType ? 'selected' : ''}>${t.label}</option>`).join('')}
           </select>
         </td>
         <td>
@@ -1238,37 +1352,52 @@ document.addEventListener('DOMContentLoaded', () => {
       previewTbody.appendChild(tr);
     });
 
-    previewMeta.innerText = `${workingParsedClasses.length} class${workingParsedClasses.length === 1 ? '' : 'es'} · Click any cell to edit`;
+    if (previewMeta) {
+      previewMeta.innerText = `${workingParsedClasses.length} class${workingParsedClasses.length === 1 ? '' : 'es'} · Click any cell to edit`;
+    }
 
-    // Live update listeners
-    previewTbody.querySelectorAll('.preview-day').forEach(el => {
-      el.addEventListener('change', e => { workingParsedClasses[e.target.dataset.idx].day = e.target.value; });
+    // Bidirectional live-sync helper
+    const syncRowToState = (idx) => {
+      const tr = previewTbody.querySelector(`tr[data-index="${idx}"]`);
+      if (!tr || !workingParsedClasses[idx]) return;
+      const dayEl   = tr.querySelector('.preview-day');
+      const startEl = tr.querySelector('.preview-start');
+      const endEl   = tr.querySelector('.preview-end');
+      const subjEl  = tr.querySelector('.preview-subject');
+      const typeEl  = tr.querySelector('.preview-type');
+      const roomEl  = tr.querySelector('.preview-room');
+      const batchEl = tr.querySelector('.preview-batch');
+
+      if (dayEl) workingParsedClasses[idx].day = dayEl.value;
+      if (startEl) workingParsedClasses[idx].startTime = startEl.value;
+      if (endEl) workingParsedClasses[idx].endTime = endEl.value;
+      if (subjEl) workingParsedClasses[idx].subject = subjEl.value;
+      if (typeEl) {
+        workingParsedClasses[idx].type = typeEl.value;
+        workingParsedClasses[idx].typeLabel = typeEl.value === 'P' ? 'Practical' : (typeEl.value === 'T' ? 'Tutorial' : 'Lecture');
+      }
+      if (roomEl) workingParsedClasses[idx].room = roomEl.value;
+      if (batchEl) workingParsedClasses[idx].batch = batchEl.value;
+    };
+
+    // Live update listeners on all inputs (input, change, blur)
+    previewTbody.querySelectorAll('.preview-input').forEach(el => {
+      const idx = parseInt(el.dataset.idx, 10);
+      el.addEventListener('input', () => syncRowToState(idx));
+      el.addEventListener('change', () => syncRowToState(idx));
+      el.addEventListener('blur', () => syncRowToState(idx));
     });
-    previewTbody.querySelectorAll('.preview-start').forEach(el => {
-      el.addEventListener('input', e => { workingParsedClasses[e.target.dataset.idx].startTime = e.target.value; });
-    });
-    previewTbody.querySelectorAll('.preview-end').forEach(el => {
-      el.addEventListener('input', e => { workingParsedClasses[e.target.dataset.idx].endTime = e.target.value; });
-    });
-    previewTbody.querySelectorAll('.preview-subject').forEach(el => {
-      el.addEventListener('input', e => { workingParsedClasses[e.target.dataset.idx].subject = e.target.value; });
-    });
-    previewTbody.querySelectorAll('.preview-type').forEach(el => {
-      el.addEventListener('change', e => {
-        workingParsedClasses[e.target.dataset.idx].type = e.target.value;
-        workingParsedClasses[e.target.dataset.idx].typeLabel = e.target.value === 'P' ? 'Practical' : (e.target.value === 'T' ? 'Tutorial' : 'Lecture');
-      });
-    });
-    previewTbody.querySelectorAll('.preview-room').forEach(el => {
-      el.addEventListener('input', e => { workingParsedClasses[e.target.dataset.idx].room = e.target.value; });
-    });
-    previewTbody.querySelectorAll('.preview-batch').forEach(el => {
-      el.addEventListener('input', e => { workingParsedClasses[e.target.dataset.idx].batch = e.target.value; });
-    });
+
+    // Remove row listener
     previewTbody.querySelectorAll('.btn-remove-row').forEach(el => {
-      el.addEventListener('click', e => {
-        const idx = parseInt(e.target.dataset.idx, 10);
-        workingParsedClasses.splice(idx, 1);
+      el.addEventListener('click', (e) => {
+        const harvested = harvestPreviewRows();
+        const btn = e.currentTarget;
+        const idx = parseInt(btn.dataset.idx, 10);
+        if (!isNaN(idx) && idx >= 0 && idx < harvested.length) {
+          harvested.splice(idx, 1);
+        }
+        workingParsedClasses = harvested;
         renderEditablePreviewTable(workingParsedClasses);
       });
     });
@@ -1276,7 +1405,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (addClassBtn) {
     addClassBtn.addEventListener('click', () => {
-      if (!workingParsedClasses) workingParsedClasses = [];
+      const currentRows = harvestPreviewRows();
+      workingParsedClasses = currentRows.length > 0 ? currentRows : (workingParsedClasses || []);
       workingParsedClasses.push({
         day: 'Monday',
         startTime: '08:30',
@@ -1334,57 +1464,124 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Save Schedule Button
   saveTimetableBtn?.addEventListener('click', async () => {
-    if (!workingParsedClasses || workingParsedClasses.length === 0 || !activeGroupId) {
+    // 1. Verify squad context first
+    if (!activeGroupId) {
+      alert('Please select or join a campus squad first before saving your timetable.');
+      return;
+    }
+
+    // 2. Harvest live rows directly from DOM first, falling back to workingParsedClasses
+    const domHarvested = harvestPreviewRows();
+    const candidateClasses = (domHarvested && domHarvested.length > 0)
+      ? domHarvested
+      : (workingParsedClasses || []);
+
+    if (!candidateClasses || candidateClasses.length === 0) {
       alert('Please add at least one valid class before saving.');
       return;
     }
 
+    // 3. Validate entries, ignore completely empty rows, and build schedule object
     const scheduleToSave = {};
-    for (const c of workingParsedClasses) {
-      const day   = (c.day || '').trim();
-      const sTime = normaliseTime(c.startTime);
-      const eTime = normaliseTime(c.endTime);
-      const subj  = (c.subject || '').trim();
-      if (!day || !sTime || !eTime || !subj) continue;
+    let validClassCount = 0;
+    let hasErrors = false;
 
+    for (let i = 0; i < candidateClasses.length; i++) {
+      const c = candidateClasses[i];
+      const subj = (c.subject || c.courseCode || c.course || c.code || '').trim();
+      const rawStart = (c.startTime || c.start || '').trim();
+      const rawEnd = (c.endTime || c.end || '').trim();
+      const room = (c.room || '').trim();
+      const batch = (c.batch || c.group || c.section || '').trim();
+      const day = (c.day || c.dayOfWeek || 'Monday').trim();
+      const rawType = c.type || c.classType || 'L';
+      const type = rawType.toUpperCase().startsWith('P') ? 'P' :
+                   rawType.toUpperCase().startsWith('T') ? 'T' : 'L';
+      const typeLabel = c.typeLabel || (type === 'P' ? 'Practical' : (type === 'T' ? 'Tutorial' : 'Lecture'));
+
+      // Check if row is completely empty (no subject, room, or batch, or default/blank)
+      const isCompletelyEmpty = !subj && !room && !batch;
+      if (isCompletelyEmpty) {
+        continue; // Cleanly ignore completely empty rows without error
+      }
+
+      // If user provided some details but left subject blank
+      if (!subj) {
+        alert(`Row ${i + 1} (${day}): Please enter a course code / subject name.`);
+        hasErrors = true;
+        break;
+      }
+
+      const sTime = normaliseTime(rawStart);
+      const eTime = normaliseTime(rawEnd);
+
+      if (!sTime || !eTime) {
+        alert(`Row ${i + 1} (${subj} on ${day}): Please enter valid start and end times (e.g. 08:30 - 09:20).`);
+        hasErrors = true;
+        break;
+      }
+
+      const startMins = timeToMinutes(sTime);
+      const endMins = timeToMinutes(eTime);
+
+      if (endMins <= startMins) {
+        alert(`Invalid time for ${subj} on ${day}: End Time (${eTime}) must be after Start Time (${sTime}).`);
+        hasErrors = true;
+        break;
+      }
+
+      // Valid class entry
       if (!scheduleToSave[day]) scheduleToSave[day] = {};
-      const slotKey = `${sTime} - ${eTime}`;
+      let slotKey = `${sTime} - ${eTime}`;
+      if (scheduleToSave[day][slotKey]) {
+        slotKey = `${sTime} - ${eTime}|${batch || validClassCount}`;
+      }
+
       scheduleToSave[day][slotKey] = {
         status: 'busy',
         subject: subj,
-        room: (c.room || '').trim(),
-        type: c.type || 'L',
-        typeLabel: c.typeLabel || (c.type === 'P' ? 'Practical' : (c.type === 'T' ? 'Tutorial' : 'Lecture')),
-        batch: (c.batch || '').trim(),
+        room,
+        type,
+        typeLabel,
+        batch,
         startTime: sTime,
         endTime: eTime
       };
+      validClassCount++;
     }
 
-    if (Object.keys(scheduleToSave).length === 0) {
-      alert('Please fill in valid Day, Start Time, End Time, and Course Name.');
+    if (hasErrors) return;
+
+    if (validClassCount === 0 || Object.keys(scheduleToSave).length === 0) {
+      alert('Please add at least one valid class before saving.');
       return;
     }
 
+    // Keep workingParsedClasses in sync with latest harvested state
+    workingParsedClasses = candidateClasses;
+
     saveTimetableBtn.disabled = true;
     saveTimetableBtn.innerText = 'Saving…';
-    uploadStatus.classList.remove('hidden');
-    timetableStatusText.innerText = 'Saving timetable to campus squad…';
+    if (uploadStatus) uploadStatus.classList.remove('hidden');
+    if (timetableStatusText) timetableStatusText.innerText = 'Saving timetable to campus squad…';
 
     try {
       await saveGroupSchedule(activeGroupId, scheduleToSave);
-      timetableStatusText.innerText = 'Timetable saved successfully!';
+      currentUserSchedule = scheduleToSave;
+      if (timetableStatusText) timetableStatusText.innerText = 'Timetable saved successfully!';
+      showToast('✓ Timetable saved successfully!');
       setTimeout(async () => {
-        uploadStatus.classList.add('hidden');
+        if (uploadStatus) uploadStatus.classList.add('hidden');
         saveTimetableBtn.disabled = false;
         saveTimetableBtn.innerText = '✓ Looks good, Save Timetable';
         workingParsedClasses = [];
         await evaluateTimetableStatus();
       }, 1200);
     } catch (err) {
-      timetableStatusText.innerText = 'Save failed: ' + err.message;
+      if (timetableStatusText) timetableStatusText.innerText = 'Save failed: ' + err.message;
       saveTimetableBtn.disabled = false;
       saveTimetableBtn.innerText = '✓ Looks good, Save Timetable';
+      alert('Save failed: ' + err.message);
     }
   });
 

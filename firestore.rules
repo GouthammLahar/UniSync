@@ -116,19 +116,100 @@ service cloud.firestore {
     // ==========================================
     match /meetings/{meetingId} {
 
+      function isParticipantOf() {
+        return request.auth != null
+          && request.auth.uid in resource.data.participants;
+      }
+
+      function isOrganizerOf() {
+        return request.auth != null
+          && resource.data.organizerUid == request.auth.uid;
+      }
+
       allow read: if request.auth != null
         && request.auth.uid in resource.data.participants;
 
       allow create: if request.auth != null
         && request.auth.uid in request.resource.data.participants;
 
+      // Participant: may update only responses + updatedAt
+      // Organizer: may also update status, finalOptionIndex, confirmedAt,
+      //            date, startTime, endTime, votingDeadline
       allow update: if request.auth != null
         && request.auth.uid in resource.data.participants
-        && request.resource.data.diff(resource.data)
-             .affectedKeys()
-             .hasOnly(['responses', 'updatedAt', 'status']);
+        && (
+          (
+            // Participant updating their own response only
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['responses', 'updatedAt'])
+          )
+          ||
+          (
+            // Organizer may update broader set of fields
+            resource.data.organizerUid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['responses', 'updatedAt', 'status', 'finalOptionIndex',
+                           'confirmedAt', 'date', 'startTime', 'endTime', 'votingDeadline'])
+            // For voting meetings, enforce lifecycle state transitions:
+            && (
+              // Classic meetings: unaffected
+              !(resource.data.isVotingMeeting == true)
+              ||
+              // Voting meetings:
+              (
+                // Confirmed and cancelled are terminal:
+                !(resource.data.status in ['confirmed', 'cancelled'])
+                // Valid status transitions:
+                && (
+                  request.resource.data.status == resource.data.status
+                  || (resource.data.status == 'voting_open'
+                       && request.resource.data.status in ['voting_closed', 'confirmed', 'cancelled'])
+                  || (resource.data.status == 'voting_closed'
+                       && request.resource.data.status in ['confirmed', 'cancelled'])
+                )
+              )
+            )
+          )
+        );
 
       allow delete: if false;
+
+      // ── Voting subcollection ──────────────────────────────
+      // Each participant writes only their own vote document (docId == uid)
+      match /votes/{userId} {
+
+        // Any participant of the parent meeting may read votes
+        allow read: if request.auth != null
+          && request.auth.uid in
+               get(/databases/$(database)/documents/meetings/$(meetingId)).data.participants;
+
+        // A participant can create or update only their own vote doc when
+        // the meeting is open for voting and the deadline has not passed.
+        allow create, update: if request.auth != null
+          && request.auth.uid == userId
+          // Must be a participant
+          && request.auth.uid in
+               get(/databases/$(database)/documents/meetings/$(meetingId)).data.participants
+          // Meeting must be in voting_open status
+          && get(/databases/$(database)/documents/meetings/$(meetingId)).data.status == 'voting_open'
+          // Deadline must be null or a Timestamp in the future.
+          // Legacy/invalid non-timestamp values are rejected.
+          && (
+            get(/databases/$(database)/documents/meetings/$(meetingId)).data.votingDeadline == null
+            || (
+              get(/databases/$(database)/documents/meetings/$(meetingId)).data.votingDeadline is timestamp
+              && request.time < get(/databases/$(database)/documents/meetings/$(meetingId)).data.votingDeadline
+            )
+          )
+          // Payload validation
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.optionIndex is int
+          && request.resource.data.optionIndex >= 0
+          && request.resource.data.optionIndex < get(/databases/$(database)/documents/meetings/$(meetingId)).data.votingOptions.size()
+          && request.resource.data.keys().hasOnly(['uid', 'optionIndex', 'votedAt', 'updatedAt']);
+
+        allow delete: if false;
+      }
     }
 
     // ==========================================

@@ -17,9 +17,11 @@ import {
   DAY_ORDER
 } from './schedule-utils.js?v=10';
 import { initMeetingsModule, enterMeetingsView, cleanupMeetingsModule } from './meetings.js?v=10';
+import { computeInsights, renderInsights } from './schedule-insights.js?v=10';
 import { initNotificationBell, cleanupNotificationBell } from './notifications.js?v=10';
 import { initAssistant, toggleAssistantFab, closeAssistantDrawer } from './assistant.js?v=11';
 import { initSquadChat, switchSquadSubtab, openSquadChat, closeSquadChatListener } from './squad-chat.js?v=10';
+import { listenToUserMeetings } from './meetings-db.js?v=10';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -55,6 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentUserSchedule = null;
   let activeFriendData    = null; // For 1-on-1 compare
   let allStudentsCache    = null; // Group students cache
+  let _dashboardMeetingsCache = [];
+  let _unsubDashboardMeetings = null;
 
   // Clear any jump hash from URL on load so page doesn't scroll past the hero headline
   if (window.location.hash) {
@@ -227,6 +231,19 @@ document.addEventListener('DOMContentLoaded', () => {
           showToast:          (msg, type) => showToast(msg, type)
         });
 
+        // Start meetings listener for dashboard insights
+        if (_unsubDashboardMeetings) _unsubDashboardMeetings();
+        _unsubDashboardMeetings = listenToUserMeetings(u.uid, meetings => {
+          _dashboardMeetingsCache = meetings;
+          // Re-render insights if the dashboard view is currently visible
+          const insightEl = document.getElementById('schedule-insights-section');
+          if (insightEl && currentUserSchedule && auth.currentUser) {
+            try {
+              renderInsights(computeInsights(currentUserSchedule, _dashboardMeetingsCache, auth.currentUser.uid));
+            } catch(e) { console.warn('Insights live-update error:', e); }
+          }
+        });
+
         // Init squad chat module
         initSquadChat({
           getActiveGroupId:   () => activeGroupId,
@@ -257,6 +274,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (notifBellWrap) notifBellWrap.classList.add('hidden');
       cleanupNotificationBell();
       cleanupMeetingsModule();
+      if (_unsubDashboardMeetings) { _unsubDashboardMeetings(); _unsubDashboardMeetings = null; }
+      _dashboardMeetingsCache = [];
       toggleAssistantFab(false);
       closeAssistantDrawer();
       closeSquadChatListener();
@@ -496,6 +515,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (metricFreeNow) metricFreeNow.innerText = freeCount;
     } catch(e) {}
+
+    // ── Personal Schedule Insights ────────────────────────────────────────────
+    // Source: authenticated user's own schedule (groups/{groupId}/schedules/{uid})
+    // which is already loaded into currentUserSchedule above.
+    // We pass _allMeetings from the meetings module state; since meetings.js is a
+    // separate module we read them from the Firestore listener cache via a getter.
+    try {
+      const uid = auth.currentUser?.uid;
+      const insights = computeInsights(currentUserSchedule, _dashboardMeetingsCache, uid);
+      renderInsights(insights);
+    } catch(e) {
+      console.warn('Insights render error:', e);
+    }
   }
 
 

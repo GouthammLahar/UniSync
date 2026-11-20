@@ -9,6 +9,11 @@ import {
 } from './meetings-db.js?v=10';
 import { findCommonFreeSlots, formatTime12, formatDuration, DAY_ORDER } from './schedule-utils.js?v=10';
 import { auth } from './db.js?v=10';
+import {
+  injectVotingCreationFields, readVotingOptions, resetVotingCreationFields,
+  buildVotingPanel, cleanupVoteListeners
+} from './meeting-voting.js?v=10';
+import { createVotingMeeting } from './meeting-voting-db.js?v=10';
 
 /* ── State ── */
 let _unsubMeetings = null;
@@ -34,6 +39,9 @@ export function initMeetingsModule(deps) {
   _wireMeetingCreationModal();
   _wireTabButtons();
   _wireScheduleMeetingBtn();
+
+  // Inject voting creation fields into the existing modal (once)
+  injectVotingCreationFields();
 }
 
 /**
@@ -58,6 +66,7 @@ export function enterMeetingsView() {
 export function cleanupMeetingsModule() {
   if (_unsubMeetings) { _unsubMeetings(); _unsubMeetings = null; }
   _allMeetings = [];
+  cleanupVoteListeners();
 }
 
 /* ── Tab Wiring ── */
@@ -165,8 +174,17 @@ function _emptySub(type) {
 }
 
 function _buildMeetingCard(m, type, currentUid) {
-  const statusClass = { pending: 'status-pending', confirmed: 'status-confirmed', cancelled: 'status-cancelled', completed: 'status-completed' }[m.status] || 'status-pending';
-  const statusLabel = { pending: 'Awaiting responses', confirmed: '✅ Confirmed', cancelled: '❌ Cancelled', completed: 'Completed' }[m.status] || m.status;
+  const statusClass = {
+    pending: 'status-pending', confirmed: 'status-confirmed',
+    cancelled: 'status-cancelled', completed: 'status-completed',
+    voting_open: 'status-voting-open', voting_closed: 'status-voting-closed'
+  }[m.status] || 'status-pending';
+
+  const statusLabel = {
+    pending: 'Awaiting responses', confirmed: '✅ Confirmed',
+    cancelled: '❌ Cancelled', completed: 'Completed',
+    voting_open: '🗳️ Voting Open', voting_closed: '🔒 Voting Closed'
+  }[m.status] || m.status;
 
   const dateStr = m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—';
   const timeStr = m.startTime ? `${formatTime12(m.startTime)} – ${formatTime12(m.endTime)}` : '—';
@@ -223,6 +241,7 @@ function _buildMeetingCard(m, type, currentUid) {
     </div>
     <div class="meeting-participants-names">${nameList}</div>
     ${actionsHtml}
+    ${m.isVotingMeeting ? buildVotingPanel(m, currentUid, _showToast) : ''}
   </div>`;
 }
 
@@ -310,6 +329,7 @@ function _resetMeetingModal() {
   if (byId('meeting-slots-day-select')) byId('meeting-slots-day-select').value = 'Monday';
   _selectedSlot = null;
   _selectedParticipantUids = [];
+  resetVotingCreationFields();
   _renderParticipantSelector();
 }
 
@@ -489,8 +509,6 @@ function _getNextOccurrenceDate(dayName) {
 }
 
 async function _handleCreateMeeting() {
-  if (!_selectedSlot) { _showToast?.('Please select a time slot.', 'warning'); return; }
-
   const title    = document.getElementById('meeting-title-input')?.value.trim();
   const desc     = document.getElementById('meeting-desc-input')?.value.trim();
   const duration = parseInt(document.getElementById('meeting-duration-select')?.value || '60');
@@ -504,11 +522,26 @@ async function _handleCreateMeeting() {
 
   if (!title) { _showToast?.('Title is required.', 'warning'); return; }
 
+  // Check if this is a voting meeting
+  const votingData = readVotingOptions();
+
+  // For non-voting meetings, still require a selected slot
+  if (!votingData.isVoting && !_selectedSlot) {
+    _showToast?.('Please select a time slot.', 'warning');
+    return;
+  }
+
+  // For voting meetings, require at least one option
+  if (votingData.isVoting && votingData.options.length === 0) {
+    _showToast?.('Please add at least one time option for voting.', 'warning');
+    return;
+  }
+
   const confirmBtn = document.getElementById('meeting-confirm-btn');
   if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Sending invites…'; }
 
   try {
-    // Fetch participant names for the notification
+    // Fetch participant names
     const allStudents = await _getGroupStudentsFn?.(groupId) || [];
     const participantUids = [uid, ..._selectedParticipantUids];
     const participantNames = {};
@@ -517,34 +550,52 @@ async function _handleCreateMeeting() {
     });
     participantNames[uid] = auth.currentUser?.displayName || 'Organizer';
 
-    const meetingData = {
-      title,
-      description: desc,
-      organizerName: auth.currentUser?.displayName || 'Organizer',
-      groupId,
-      groupName: groupMeta?.name || '',
-      participants: participantUids,
-      participantNames,
-      date: _selectedSlot.date,
-      startTime: _selectedSlot.startTime,
-      endTime: _selectedSlot.endTime,
-      durationMins: duration,
-      location,
-      notes,
-      meetingType: type
-    };
+    let meetingId;
 
-    const meetingId = await createMeeting(meetingData);
+    if (votingData.isVoting) {
+      // --- Voting Meeting ---
+      const meetingData = {
+        title, description: desc,
+        organizerName: auth.currentUser?.displayName || 'Organizer',
+        groupId, groupName: groupMeta?.name || '',
+        participants: participantUids, participantNames,
+        durationMins: duration, location, notes, meetingType: type,
+        votingOptions: votingData.options,
+        votingDeadline: votingData.deadline
+      };
+      meetingId = await createVotingMeeting(meetingData);
 
-    // Create in-app notifications for each participant
-    const others = _selectedParticipantUids;
-    for (const pid of others) {
-      await createNotification(
-        pid, uid, 'meeting_invite',
-        `Meeting invite: "${title}"`,
-        `${auth.currentUser?.displayName || 'Someone'} invited you to a meeting on ${_selectedSlot.date} at ${formatTime12(_selectedSlot.startTime)}.`,
-        meetingId
-      );
+      // Notify participants
+      for (const pid of _selectedParticipantUids) {
+        await createNotification(
+          pid, uid, 'meeting_invite',
+          `Vote needed: "${title}"`,
+          `${auth.currentUser?.displayName || 'Someone'} has proposed a meeting. Please vote for your preferred time.`,
+          meetingId
+        );
+      }
+    } else {
+      // --- Existing fixed-time meeting ---
+      const meetingData = {
+        title, description: desc,
+        organizerName: auth.currentUser?.displayName || 'Organizer',
+        groupId, groupName: groupMeta?.name || '',
+        participants: participantUids, participantNames,
+        date: _selectedSlot.date,
+        startTime: _selectedSlot.startTime,
+        endTime: _selectedSlot.endTime,
+        durationMins: duration, location, notes, meetingType: type
+      };
+      meetingId = await createMeeting(meetingData);
+
+      for (const pid of _selectedParticipantUids) {
+        await createNotification(
+          pid, uid, 'meeting_invite',
+          `Meeting invite: "${title}"`,
+          `${auth.currentUser?.displayName || 'Someone'} invited you to a meeting on ${_selectedSlot.date} at ${formatTime12(_selectedSlot.startTime)}.`,
+          meetingId
+        );
+      }
     }
 
     _closeMeetingModal();

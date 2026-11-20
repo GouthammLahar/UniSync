@@ -20,8 +20,11 @@ import { initMeetingsModule, enterMeetingsView, cleanupMeetingsModule } from './
 import { initNotificationBell, cleanupNotificationBell } from './notifications.js?v=10';
 import { initAssistant, toggleAssistantFab, closeAssistantDrawer } from './assistant.js?v=11';
 import { initSquadChat, switchSquadSubtab, openSquadChat, closeSquadChatListener } from './squad-chat.js?v=10';
+import { registerServiceWorker } from './fcm.js?v=10';
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Register Service Worker for PWA installability and background push
+  registerServiceWorker();
 
   // --- APP NAVIGATION ELEMENTS ---
   const publicNavLinks    = document.getElementById('public-nav-links');

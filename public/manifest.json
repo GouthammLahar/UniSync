@@ -2,23 +2,31 @@
   "name": "UniSync — Different schedules. Shared moments.",
   "short_name": "UniSync",
   "description": "Smart university timetable synchronization, friend network, and common free-time discovery.",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#F7F5EF",
-  "theme_color": "#536B5B",
   "orientation": "portrait-primary",
+  "theme_color": "#536B5B",
+  "background_color": "#F7F5EF",
   "icons": [
     {
-      "src": "./logo.png",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "./logo.png",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "categories": ["education", "productivity", "social"]

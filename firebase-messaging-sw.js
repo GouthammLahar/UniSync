@@ -7,6 +7,16 @@
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
+// Install and activate lifecycle handlers for PWA installability
+self.addEventListener('install', event => {
+  // Activate immediately without waiting
+  self.skipWaiting();
+});
+self.addEventListener('activate', event => {
+  // Take control of all clients as soon as possible
+  event.waitUntil(self.clients.claim());
+});
+
 // Firebase config — must match config.js
 // These values are safe to include in the service worker (they are client-side Firebase config, not secrets)
 firebase.initializeApp({

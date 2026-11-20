@@ -25,6 +25,25 @@ function getMessagingInstance() {
 }
 
 /**
+ * Registers the service worker with root scope '/' if supported.
+ * Safe to call on app load; does not request push notification permission.
+ * @returns {Promise<ServiceWorkerRegistration|null>}
+ */
+export async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) {
+    return null;
+  }
+  try {
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+    console.log('Service Worker registered:', registration.scope);
+    return registration;
+  } catch (err) {
+    console.error('Service Worker registration failed:', err);
+    return null;
+  }
+}
+
+/**
  * Registers the service worker and requests push permission.
  * Saves the FCM token to Firestore for backend use.
  * @param {string} uid — current user's Firebase Auth UID
@@ -36,15 +55,12 @@ export async function requestPushPermission(uid) {
     return null;
   }
 
-  // Register service worker
-  if (!('serviceWorker' in navigator)) {
-    console.warn('Service workers not supported');
-    return null;
-  }
-
   try {
-    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
-    console.log('Service Worker registered:', registration.scope);
+    const registration = await registerServiceWorker();
+    if (!registration) {
+      console.warn('Service workers not supported or registration failed');
+      return null;
+    }
 
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {

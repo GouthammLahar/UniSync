@@ -4,7 +4,8 @@ import {
   createGroup, joinGroup, leaveGroup, getUserGroups,
   regenerateGroupCode, deleteGroup, kickMember,
   getGroupProfile, updateGroupProfile, saveGroupSchedule, deleteGroupSchedule,
-  getFriendSchedule, getAllGroupStudents, searchGroupFriends, getGroupSquadStatus, getGroupMemberCount
+  getFriendSchedule, getAllGroupStudents, searchGroupFriends, getGroupSquadStatus, getGroupMemberCount,
+  checkCodeAvailability
 } from './db.js?v=10';
 import { parseLpuExcel } from './timetable-parser.js?v=10';
 import {
@@ -2140,31 +2141,121 @@ document.addEventListener('DOMContentLoaded', () => {
   const joinGroupBtn   = document.getElementById('join-group-btn');
   const onboardError   = document.getElementById('onboard-error');
 
+  // --- Custom joining-code field wiring ---
+  const createCodeInput   = document.getElementById('create-group-code');
+  const createCodeStatus  = document.getElementById('create-code-status');
+  const createCodeCounter = document.getElementById('create-code-counter');
+  let _codeCheckTimer = null;
+  let _currentCodeStatus = ''; // '', 'checking', 'available', 'taken', 'invalid'
+
+  function styleCodeStatus(msg, type) {
+    _currentCodeStatus = type;
+    const colors = {
+      available: 'var(--forest)',
+      taken:     'var(--terracotta)',
+      invalid:   'var(--terracotta)',
+      '':        'var(--ink-muted)'
+    };
+    if (createCodeStatus) {
+      createCodeStatus.textContent = msg;
+      createCodeStatus.style.color = colors[type] ?? 'var(--ink-muted)';
+    }
+  }
+
+  createCodeInput?.addEventListener('input', () => {
+    // Auto-uppercase and strip invalid chars in-place
+    const cleaned = createCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (createCodeInput.value !== cleaned) createCodeInput.value = cleaned;
+    if (createCodeCounter) createCodeCounter.textContent = `${cleaned.length} / 12`;
+
+    clearTimeout(_codeCheckTimer);
+    if (cleaned.length === 0) { styleCodeStatus('', ''); return; }
+    if (cleaned.length < 4)   { styleCodeStatus('Too short — minimum 4 characters', 'invalid'); return; }
+    if (cleaned.length > 12)  { styleCodeStatus('Too long — maximum 12 characters', 'invalid'); return; }
+
+    styleCodeStatus('Checking availability…', 'checking');
+    _codeCheckTimer = setTimeout(async () => {
+      const current = createCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (current !== cleaned) return; // stale debounce
+      try {
+        const available = await checkCodeAvailability(cleaned);
+        // Check again for staleness after the async call
+        if (createCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '') !== cleaned) return;
+        styleCodeStatus(
+          available ? '✓ This code is available!' : '✗ This code is already taken.',
+          available ? 'available' : 'taken'
+        );
+      } catch (err) {
+        if (createCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '') !== cleaned) return;
+        styleCodeStatus('Unable to verify code availability. Check connection.', 'invalid');
+      }
+    }, 600);
+  });
+
   createGroupBtn?.addEventListener('click', async () => {
-    const name = document.getElementById('create-group-name').value.trim();
-    if (!name) return;
-    onboardError.innerText = 'Creating squad…';
+    const nameInput = document.getElementById('create-group-name');
+    const name = nameInput ? nameInput.value.trim() : '';
+    if (!name) {
+      if (onboardError) onboardError.innerText = 'Please enter a squad name.';
+      return;
+    }
+
+    const rawCode = (createCodeInput?.value || '').trim();
+    if (rawCode) {
+      if (rawCode.length < 4) {
+        if (onboardError) onboardError.innerText = 'Custom joining code must be at least 4 characters.';
+        return;
+      }
+      if (rawCode.length > 12) {
+        if (onboardError) onboardError.innerText = 'Custom joining code cannot exceed 12 characters.';
+        return;
+      }
+      if (_currentCodeStatus === 'taken') {
+        if (onboardError) onboardError.innerText = 'This joining code is already taken. Please choose another.';
+        return;
+      }
+    }
+
+    createGroupBtn.disabled = true;
+    if (onboardError) onboardError.innerText = 'Creating squad…';
+    styleCodeStatus('', '');
+
     try {
-      const g = await createGroup(name);
+      const g = await createGroup(name, rawCode);
       activeGroupId = g.id;
-      document.getElementById('create-group-name').value = '';
+      if (nameInput) nameInput.value = '';
+      if (createCodeInput)   createCodeInput.value = '';
+      if (createCodeCounter) createCodeCounter.textContent = '0 / 12';
+      if (onboardError) onboardError.innerText = '';
       await reloadAllUserGroups();
     } catch (e) {
-      onboardError.innerText = e.message;
+      if (onboardError) onboardError.innerText = e.message;
+    } finally {
+      createGroupBtn.disabled = false;
     }
   });
 
   joinGroupBtn?.addEventListener('click', async () => {
-    const code = document.getElementById('join-group-code').value.trim();
-    if (!code) return;
-    onboardError.innerText = 'Joining squad…';
+    const codeInput = document.getElementById('join-group-code');
+    const code = codeInput ? codeInput.value.trim() : '';
+    if (!code) {
+      if (onboardError) onboardError.innerText = 'Please enter a squad joining code.';
+      return;
+    }
+
+    joinGroupBtn.disabled = true;
+    if (onboardError) onboardError.innerText = 'Joining squad…';
+
     try {
       const g = await joinGroup(code);
       activeGroupId = g.id;
-      document.getElementById('join-group-code').value = '';
+      if (codeInput) codeInput.value = '';
+      if (onboardError) onboardError.innerText = '';
       await reloadAllUserGroups();
     } catch (e) {
-      onboardError.innerText = e.message;
+      if (onboardError) onboardError.innerText = e.message;
+    } finally {
+      joinGroupBtn.disabled = false;
     }
   });
 

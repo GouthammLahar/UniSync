@@ -1045,14 +1045,30 @@
             <h3 style="margin-bottom:4px;">Create New Squad</h3>
             <p style="font-size:0.86rem; margin-bottom:var(--space-4);">Start a private, invite-only group for your friends.</p>
             <input type="text" id="create-group-name" placeholder="Squad Name (e.g. CS Section B)" style="margin-bottom:var(--space-3);" />
+
+            <!-- Custom Joining Code (Optional) -->
+            <div style="margin-bottom:var(--space-3);">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
+                <label for="create-group-code" style="font-size:0.82rem; font-weight:600; color:var(--ink-muted);">Custom Joining Code <span style="font-weight:400;">(Optional)</span></label>
+                <span id="create-code-counter" style="font-size:0.75rem; color:var(--ink-muted);">0 / 12</span>
+              </div>
+              <input type="text" id="create-group-code"
+                placeholder="Create your own code"
+                maxlength="12"
+                autocomplete="off"
+                style="font-family:var(--font-mono); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;" />
+              <p style="font-size:0.76rem; color:var(--ink-muted); margin:0 0 2px;">4–12 characters · Letters and numbers only</p>
+              <span id="create-code-status" style="font-size:0.78rem; display:block; min-height:1.1em;"></span>
+            </div>
+
             <button id="create-group-btn" class="btn-primary" style="width:100%;">Create Squad</button>
           </div>
 
           <div class="card" style="margin-bottom:0;">
             <div style="font-size:1.6rem; margin-bottom:8px;">🔑</div>
             <h3 style="margin-bottom:4px;">Join a Squad</h3>
-            <p style="font-size:0.86rem; margin-bottom:var(--space-4);">Enter the 6-character code shared by your friend.</p>
-            <input type="text" id="join-group-code" placeholder="Invite Code (e.g. CLA-1234)" style="font-family:var(--font-mono); text-transform:uppercase; letter-spacing:2px; margin-bottom:var(--space-3);" />
+            <p style="font-size:0.86rem; margin-bottom:var(--space-4);">Enter your squad's joining code shared by your friend.</p>
+            <input type="text" id="join-group-code" placeholder="e.g. LAHARFRIENDS or CLA1234" style="font-family:var(--font-mono); text-transform:uppercase; letter-spacing:2px; margin-bottom:var(--space-3);" />
             <button id="join-group-btn" class="btn-primary" style="width:100%; background:var(--forest-dark);">Join Squad</button>
           </div>
         </div>

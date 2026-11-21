@@ -164,6 +164,50 @@ service cloud.firestore {
     }
 
     // ==========================================
+    // GROUP CODE RESERVATIONS
+    // ==========================================
+    match /groupCodes/{codeId} {
+      // Authenticated users can read individual code documents by ID.
+      // This is required for:
+      //   (a) availability checks  — client reads groupCodes/{CODE} to see if it exists
+      //   (b) join-by-code flow    — client reads groupCodes/{CODE} to get the groupId
+      //
+      // Enumeration risk: Firestore rules cannot distinguish a point-read from a
+      // collection-level query at the rule layer, but the client SDK will reject any
+      // collection-level query (list) that is not explicitly allowed. Since we do NOT
+      // grant `list` permission here — only `get` — a client can only read a document
+      // if it already knows the exact code. That is not meaningful enumeration because
+      // the user must already possess the code to look it up.
+      //
+      // The groupId field (a Firestore auto-ID) is revealed on a successful read.
+      // This is acceptable: a user who knows the code should be able to find the group.
+      allow get: if request.auth != null;
+
+      // Explicitly deny collection-level listing — no authenticated user can enumerate
+      // all codes. This rule is redundant (list is not granted above) but serves as
+      // documentation and a defence-in-depth measure.
+      allow list: if false;
+
+      // Any authenticated user can claim an unclaimed code.
+      // Firestore rejects this as an UPDATE (and rules deny updates) if the doc
+      // already exists — making the first writer the permanent owner.
+      allow create: if request.auth != null
+        // Code ID must be valid: 4–12 uppercase alphanumeric characters
+        && codeId.matches('^[A-Z0-9]{4,12}$')
+        // Document must contain exactly the two required fields
+        && request.resource.data.keys().hasAll(['groupId', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['groupId', 'createdAt'])
+        && request.resource.data.groupId is string
+        && request.resource.data.groupId.size() > 0
+        && request.resource.data.createdAt is string;
+
+      // No client may update or delete a claimed code reservation.
+      // Old codes are intentionally kept as tombstones so former members can still
+      // join via an old code after regeneration. Admin cleanup via Firebase Console.
+      allow update, delete: if false;
+    }
+
+    // ==========================================
     // ASSISTANT USAGE (Backend Admin SDK only)
     // ==========================================
     match /assistantUsage/{usageId} {

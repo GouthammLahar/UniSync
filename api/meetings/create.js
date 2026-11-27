@@ -5,7 +5,7 @@
  */
 
 import { verifyToken, getAdminFirestore, sendFCMToTokens, getTokensForUsers } from '../_utils/admin.js';
-import { sendMeetingInviteEmails } from '../_utils/email.js';
+import { sendGmailMeetingInvites } from '../_utils/gmail.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -95,11 +95,11 @@ export default async function handler(req, res) {
       );
     }
 
-    // Send email invitations via Resend (non-blocking)
+    // Send email invitations via organizer's connected Gmail (non-blocking)
     try {
-      await sendMeetingInviteEmails(finalMeetingData, meetingId);
+      await sendGmailMeetingInvites(finalMeetingData, meetingId);
     } catch (emailErr) {
-      console.error('[api/meetings/create] Email dispatch error:', emailErr);
+      console.error('[api/meetings/create] Gmail dispatch error:', emailErr);
     }
 
     return res.status(200).json({ success: true, meetingId });

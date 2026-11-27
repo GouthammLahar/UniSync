@@ -5,7 +5,7 @@
  */
 
 import { verifyToken, getAdminFirestore, sendFCMToTokens, getTokensForUsers } from '../_utils/admin.js';
-import { sendMeetingCancelledEmails } from '../_utils/email.js';
+import { sendGmailMeetingCancelled } from '../_utils/gmail.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -63,9 +63,9 @@ export default async function handler(req, res) {
       );
     }
 
-    // Send email cancellation to all participants (non-blocking)
+    // Send email cancellation to all participants via organizer's Gmail (non-blocking)
     try {
-      await sendMeetingCancelledEmails(meeting, meetingId);
+      await sendGmailMeetingCancelled(meeting, meetingId);
     } catch (emailErr) {
       console.error('[api/meetings/cancel] Cancelled email dispatch error:', emailErr);
     }

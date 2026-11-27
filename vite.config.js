@@ -3,11 +3,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      input: {
+        main: path.resolve(process.cwd(), 'index.html'),
+        privacy: path.resolve(process.cwd(), 'privacy.html')
+      }
+    }
+  },
   plugins: [
     {
       name: 'vercel-api-dev-middleware',
       configureServer(server) {
         server.middlewares.use(async (req, res, next) => {
+          if (req.url === '/privacy' || req.url === '/privacy/') {
+            req.url = '/privacy.html';
+            return next();
+          }
+
           if (!req.url || !req.url.startsWith('/api/')) {
             return next();
           }

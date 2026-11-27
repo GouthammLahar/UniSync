@@ -505,6 +505,7 @@
             </div>
             <div>
               <h4 style="font-size:0.9rem; margin-bottom:8px;">Campus Privacy</h4>
+              <p style="font-size:0.85rem;"><a href="/privacy" style="color:var(--primary); font-weight:600;">Privacy Policy</a></p>
               <p style="font-size:0.85rem; color:var(--ink-secondary);">Invite-only groups</p>
               <p style="font-size:0.85rem; color:var(--ink-secondary);">Private Firestore security</p>
               <p style="font-size:0.85rem; color:var(--ink-secondary);">Google OAuth 2.0</p>
@@ -1231,10 +1232,17 @@
             <h1 class="view-heading">Meetings</h1>
             <p class="view-subheading">Schedule, track and coordinate meetings with your squad.</p>
           </div>
-          <button class="btn-primary" id="schedule-meeting-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Schedule Meeting
-          </button>
+          <div class="meetings-header-actions" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button class="gmail-connect-btn" id="gmail-connect-btn" type="button" title="Connect Gmail to send meeting invitations from your address">
+              <span class="gmail-status-dot"></span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+              <span id="gmail-connect-btn-text">Connect Gmail</span>
+            </button>
+            <button class="btn-primary" id="schedule-meeting-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Schedule Meeting
+            </button>
+          </div>
         </div>
         <div class="meetings-tab-bar">
           <button class="meeting-tab-btn active" data-tab="upcoming">Upcoming</button>
@@ -1336,6 +1344,11 @@
           </div>
           <div class="slots-scroll-area">
             <div id="meeting-slots-list" class="meeting-slots-list"></div>
+          </div>
+          <div id="meeting-gmail-indicator-wrap" style="padding:0 4px 10px;">
+            <p class="meeting-gmail-indicator" id="meeting-gmail-indicator" style="font-size:0.8rem; color:var(--ink-secondary); margin:0; display:flex; align-items:center; gap:6px;">
+              <span>ℹ️ In-app & push notifications will be sent to participants.</span>
+            </p>
           </div>
           <div class="meeting-modal-footer form-row">
             <button class="btn-secondary" id="meeting-back-btn">← Back</button>

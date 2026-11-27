@@ -5,7 +5,7 @@
  */
 
 import { verifyToken, getAdminFirestore, sendFCMToTokens, getTokensForUsers } from '../_utils/admin.js';
-import { sendMeetingResponseEmail, sendMeetingConfirmedEmails } from '../_utils/email.js';
+import { sendGmailMeetingResponse, sendGmailMeetingConfirmed } from '../_utils/gmail.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -65,9 +65,9 @@ export default async function handler(req, res) {
       });
     }
 
-    // Send email notification to organizer (non-blocking)
+    // Send email notification to organizer from responder's Gmail (non-blocking)
     try {
-      await sendMeetingResponseEmail(meeting, meetingId, uid, response);
+      await sendGmailMeetingResponse(meeting, meetingId, uid, response);
     } catch (emailErr) {
       console.error('[api/meetings/respond] Organizer email dispatch error:', emailErr);
     }
@@ -106,9 +106,9 @@ export default async function handler(req, res) {
         );
       }
 
-      // Send confirmed email to all participants (non-blocking)
+      // Send confirmed email to all participants from organizer's connected Gmail (non-blocking)
       try {
-        await sendMeetingConfirmedEmails(meeting, meetingId);
+        await sendGmailMeetingConfirmed(meeting, meetingId);
       } catch (emailErr) {
         console.error('[api/meetings/respond] Confirmed email dispatch error:', emailErr);
       }

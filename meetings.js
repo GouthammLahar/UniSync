@@ -21,6 +21,138 @@ let _showToast          = null;
 
 /* ── Bootstrap ── */
 
+/* ── Gmail Connection State ── */
+let _gmailStatus = { connected: false, email: null };
+
+async function _checkGmailOAuthParams() {
+  const params = new URLSearchParams(window.location.search);
+  const gmailParam = params.get('gmail');
+  if (!gmailParam) return;
+
+  if (gmailParam === 'connected') {
+    _showToast?.('✅ Gmail connected! Invitations will now be sent from your address.', 'success');
+  } else if (gmailParam === 'denied' || gmailParam === 'error') {
+    const reason = params.get('reason') || 'Authorization was cancelled';
+    _showToast?.(`Gmail connection cancelled: ${reason}`, 'warning');
+  }
+
+  // Clean URL parameters without reloading
+  params.delete('gmail');
+  params.delete('reason');
+  const newQuery = params.toString() ? `?${params.toString()}` : '';
+  const newUrl = `${window.location.pathname}${newQuery}${window.location.hash}`;
+  window.history.replaceState({}, document.title, newUrl);
+}
+
+export async function refreshGmailStatus() {
+  const btn = document.getElementById('gmail-connect-btn');
+  const btnText = document.getElementById('gmail-connect-btn-text');
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    const token = await user.getIdToken();
+    const res = await fetch('/api/auth/gmail/status', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Status error');
+    const data = await res.json();
+    _gmailStatus = data;
+
+    if (btn && btnText) {
+      if (data.connected) {
+        btn.classList.add('connected');
+        btnText.textContent = 'Gmail Connected';
+        btn.title = `Connected as ${data.email || 'your Gmail'}. Click to disconnect.`;
+      } else {
+        btn.classList.remove('connected');
+        btnText.textContent = 'Connect Gmail';
+        btn.title = 'Connect Gmail to send meeting invitations from your address.';
+      }
+    }
+    _updateModalGmailIndicator();
+  } catch (err) {
+    console.warn('[Meetings] Failed to check Gmail status:', err.message);
+  }
+}
+
+function _updateModalGmailIndicator() {
+  const indicator = document.getElementById('meeting-gmail-indicator');
+  if (!indicator) return;
+
+  if (_gmailStatus.connected) {
+    indicator.innerHTML = `<span style="color:#15803D;">✉️ Invitations will be sent directly from your connected Gmail (<strong>${_gmailStatus.email || 'your address'}</strong>).</span>`;
+  } else {
+    indicator.innerHTML = `<span>ℹ️ Invitations will be delivered via in-app & push notifications. <a href="#" id="modal-connect-gmail-link" style="color:var(--primary); font-weight:600; text-decoration:underline;">Connect Gmail</a> to send emails from your address.</span>`;
+    document.getElementById('modal-connect-gmail-link')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      _handleConnectGmail();
+    });
+  }
+}
+
+function _wireGmailConnectBtn() {
+  const btn = document.getElementById('gmail-connect-btn');
+  if (btn) {
+    btn.addEventListener('click', async () => {
+      if (_gmailStatus.connected) {
+        const confirmDisconnect = confirm(`Disconnect your Gmail account (${_gmailStatus.email || 'connected'})?\n\nUniSync will no longer send meeting emails on your behalf.`);
+        if (!confirmDisconnect) return;
+
+        btn.disabled = true;
+        try {
+          const token = await auth.currentUser?.getIdToken();
+          const res = await fetch('/api/auth/gmail/disconnect', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            _showToast?.('Gmail account disconnected.', 'info');
+            await refreshGmailStatus();
+          } else {
+            throw new Error('Failed to disconnect');
+          }
+        } catch (err) {
+          _showToast?.('Error disconnecting Gmail: ' + err.message, 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      } else {
+        await _handleConnectGmail();
+      }
+    });
+  }
+}
+
+async function _handleConnectGmail() {
+  const btn = document.getElementById('gmail-connect-btn');
+  const btnText = document.getElementById('gmail-connect-btn-text');
+  if (btn) btn.disabled = true;
+  if (btnText) btnText.textContent = 'Connecting…';
+
+  try {
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) throw new Error('You must be signed in.');
+
+    const res = await fetch('/api/auth/gmail/url', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.url) {
+      throw new Error(data.message || data.error || 'Failed to initiate Google authorization.');
+    }
+
+    // Redirect user to Google OAuth consent screen
+    window.location.href = data.url;
+  } catch (err) {
+    console.error('[Connect Gmail Error]:', err);
+    _showToast?.(err.message, 'error');
+    if (btn) btn.disabled = false;
+    if (btnText) btnText.textContent = 'Connect Gmail';
+  }
+}
+
 /**
  * Called once from app.js after login.
  * @param {Object} deps — { getAllGroupStudents, getActiveGroupId, getActiveGroupMeta, showToast }
@@ -31,6 +163,8 @@ export function initMeetingsModule(deps) {
   _getActiveGroupMeta = deps.getActiveGroupMeta;
   _showToast          = deps.showToast;
 
+  _checkGmailOAuthParams();
+  _wireGmailConnectBtn();
   _wireMeetingCreationModal();
   _wireTabButtons();
   _wireScheduleMeetingBtn();
@@ -50,6 +184,7 @@ export function enterMeetingsView() {
   });
 
   _renderActiveTab();
+  refreshGmailStatus();
 }
 
 /**
@@ -319,6 +454,7 @@ export function openMeetingCreationModal() {
   const modal = document.getElementById('meeting-creation-modal');
   if (!modal) return;
   _resetMeetingModal();
+  _updateModalGmailIndicator();
   modal.classList.remove('hidden');
   modal.classList.add('open');
   _goToStep(1);
@@ -376,6 +512,9 @@ function _goToStep(step) {
   document.querySelectorAll('.meeting-modal-step').forEach((el, i) => {
     el.classList.toggle('active', i + 1 === step);
   });
+  if (step === 2) {
+    _updateModalGmailIndicator();
+  }
 }
 
 async function _renderParticipantSelector() {

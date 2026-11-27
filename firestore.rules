@@ -213,5 +213,20 @@ service cloud.firestore {
     match /assistantUsage/{usageId} {
       allow read, write: if false;
     }
+
+    // ==========================================
+    // USER CREDENTIALS & INTEGRATIONS (Backend Admin SDK only)
+    // Secure server-side OAuth tokens — never client readable/writable
+    // ==========================================
+    match /userCredentials/{userId} {
+      allow read, write: if false;
+    }
+
+    // ==========================================
+    // MEETING EMAILS (Backend Admin SDK only)
+    // ==========================================
+    match /meetingEmails/{emailId} {
+      allow read, write: if false;
+    }
   }
 }

@@ -5,7 +5,7 @@
  */
 
 import { getAdminFirestore, sendFCMToTokens, getTokensForUsers } from '../_utils/admin.js';
-import { sendMeetingReminderEmails } from '../_utils/email.js';
+import { sendGmailMeetingReminder } from '../_utils/gmail.js';
 
 // Secret to verify this is a Vercel Cron call (optional but recommended)
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -86,9 +86,9 @@ export default async function handler(req, res) {
         );
       }
 
-      // Send email reminders via Resend (non-blocking)
+      // Send email reminders via organizer's connected Gmail (non-blocking)
       try {
-        await sendMeetingReminderEmails(meeting, meetingId, nearestWindow);
+        await sendGmailMeetingReminder(meeting, meetingId, nearestWindow);
       } catch (emailErr) {
         console.error('[api/reminders/cron] Email reminder error:', emailErr);
       }

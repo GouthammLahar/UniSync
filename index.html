@@ -7,18 +7,22 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="UniSync" />
-    <meta name="theme-color" content="#536B5B" />
+    <meta name="theme-color" content="#031E5B" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/png" href="./logo.png" />
-    <link rel="apple-touch-icon" href="./logo.png" />
-    <title>UniSync — Different schedules. Shared moments.</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon-64.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/favicon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/favicon-192.png" />
+    <title>UniSync — Your Campus, in Sync.</title>
     <meta name="description" content="Discover when your university friends are free. Import timetables via Excel or manual entry, form private campus squads, and uncover shared moments effortlessly." />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./style.css?v=12">
     <script type="importmap">
     {
@@ -40,10 +44,9 @@
 
         <!-- ── LEFT: Brand + Squad Pill ── -->
         <div class="nav-left">
-          <a href="#" class="brand-block" id="nav-brand-link">
-            <!-- Icon-only logo for compact nav -->
-            <img src="./logo-icon.svg" alt="UniSync" class="brand-logo-icon" width="32" height="32" />
-            <span class="brand-name">UniSync</span>
+          <a href="#" class="brand-block" id="nav-brand-link" aria-label="UniSync Home">
+            <img src="/brand/02-symbol-transparent.png" alt="UniSync Symbol" class="brand-logo-icon" width="32" height="32" />
+            <img src="/brand/04-wordmark-only-transparent.png?v=2" alt="UniSync" class="brand-wordmark-img" height="22" />
           </a>
           <!-- Squad Switcher Pill -->
           <div class="squad-selector-pill hidden" id="squad-pill-wrapper">
@@ -320,16 +323,25 @@
 
           <div class="editorial-grid-3">
             <div class="editorial-card">
+              <div class="concept-icon-wrap">
+                <img src="/brand/07-concept-time.png" alt="Time — Make every moment count" class="concept-icon-img" loading="lazy" />
+              </div>
               <div class="card-num">Step 1</div>
               <h3>Import Your Timetable</h3>
               <p>Upload your Excel sheet or enter classes manually. The interactive review table lets you verify, edit, or add any class before saving to your profile.</p>
             </div>
             <div class="editorial-card">
+              <div class="concept-icon-wrap">
+                <img src="/brand/05-concept-togetherness.png" alt="Togetherness — Students. Friends. You." class="concept-icon-img" loading="lazy" />
+              </div>
               <div class="card-num">Step 2</div>
               <h3>Create Private Squads</h3>
-              <p>Form invite-only circles with your branch mates, study buddies, or project group using a 6-character code. Your data stays strictly inside your trusted circle.</p>
+              <p>Form invite-only circles with your branch mates, study buddies, or project group using custom or auto-generated invite codes. Your data stays strictly inside your trusted circle.</p>
             </div>
             <div class="editorial-card">
+              <div class="concept-icon-wrap">
+                <img src="/brand/06-concept-synchronization.png" alt="Synchronization — Align your schedules" class="concept-icon-img" loading="lazy" />
+              </div>
               <div class="card-num">Step 3</div>
               <h3>Find Shared Windows</h3>
               <p>Pick any group of friends and see the exact continuous hours and minutes when everyone is free. Filter by minimum duration like 30 minutes, 45 minutes, or 1 hour.</p>
@@ -467,9 +479,10 @@
 
         <!-- Section 10: Final CTA -->
         <div class="final-cta-section">
+          <img src="/brand/11-horizontal-dark-reference.png" alt="UniSync — Your Campus, in Sync." class="cta-dark-logo" loading="lazy" />
           <h2>Ready to stop asking who's free?</h2>
           <p>Sync your semester with your squad. Experience campus life with effortless coordination.</p>
-          <button id="final-cta-btn" class="btn-primary btn-lg" style="background:#fff; color:var(--forest-deep);">
+          <button id="final-cta-btn" class="btn-primary btn-lg" style="background:#fff; color:var(--midnight);">
             Sign in with Google to Get Started
           </button>
         </div>
@@ -479,11 +492,9 @@
           <div class="footer-top">
             <div class="footer-brand">
               <div class="footer-brand-mark">
-                <img src="./logo-icon.svg" alt="UniSync" width="28" height="28" style="display:inline-block;vertical-align:middle;margin-right:8px;" />
-                <h3 style="display:inline;vertical-align:middle;">UniSync</h3>
+                <img src="/brand/01-primary-logo-transparent.png" alt="UniSync — Connect • Coordinate • Together" class="footer-primary-logo" loading="lazy" />
               </div>
-              <p style="font-size:0.8rem;margin-top:4px;opacity:0.7;">One Campus. One Sync.</p>
-              <p>Different schedules. Shared moments. The student availability and timetable collaboration platform for higher education.</p>
+              <p>Your Campus, in Sync. The student availability and timetable collaboration platform for higher education.</p>
             </div>
             <div>
               <h4 style="font-size:0.9rem; margin-bottom:8px;">Platform</h4>
@@ -744,7 +755,7 @@
             <button id="friend-back-btn" class="btn-secondary btn-sm" type="button" style="display:inline-flex; align-items:center; gap:6px;">
               ← Back to Find Friends
             </button>
-            <button id="compare-friend-btn" class="btn-primary btn-sm" style="background:var(--terracotta);">
+            <button id="compare-friend-btn" class="btn-primary btn-sm">
               ⚡ Compare Free Time with Me
             </button>
           </div>

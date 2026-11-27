@@ -1,23 +1,23 @@
 {
-  "name": "UniSync — Different schedules. Shared moments.",
+  "name": "UniSync — Your Campus, in Sync.",
   "short_name": "UniSync",
-  "description": "Smart university timetable synchronization, friend network, and common free-time discovery.",
+  "description": "Connect. Coordinate. Together. Smart university timetable synchronization, friend network, and common free-time discovery.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "theme_color": "#536B5B",
-  "background_color": "#F7F5EF",
+  "theme_color": "#031E5B",
+  "background_color": "#F8FAFC",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/icons/favicon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/icons/favicon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"

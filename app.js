@@ -433,7 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         if (dashLiveStatusTitle) dashLiveStatusTitle.innerText = 'Free right now! 😎';
         if (dashLiveStatusSub) dashLiveStatusSub.innerText = 'No classes active at this moment';
-        if (dashPulseDot) dashPulseDot.style.background = 'var(--forest)';
+        if (dashPulseDot) dashPulseDot.style.background = 'var(--cyan)';
       }
 
       // Populate today's classes
@@ -1807,7 +1807,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         card.innerHTML = `
           <div style="display:flex; align-items:center; gap:var(--space-3);">
-            <div class="user-avatar-circle" style="background:linear-gradient(135deg, var(--forest), #123F30); width:42px; height:42px; font-size:1.05rem;">
+            <div class="user-avatar-circle" style="background:linear-gradient(135deg, var(--royal), var(--midnight)); width:42px; height:42px; font-size:1.05rem;">
               ${initial}
             </div>
             <div class="info">

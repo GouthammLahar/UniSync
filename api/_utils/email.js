@@ -190,7 +190,7 @@ export async function sendEmailViaResend({ to, subject, html, idempotencyKey = n
    RESPONSIVE BRAND EMAIL TEMPLATES
 ========================================================= */
 
-function baseEmailTemplate({ badgeText, badgeBg, badgeColor, headline, bodyContent, meetingCardHtml, ctaText, ctaUrl }) {
+export function baseEmailTemplate({ badgeText, badgeBg, badgeColor, headline, bodyContent, meetingCardHtml, ctaText, ctaUrl }) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -292,7 +292,7 @@ function baseEmailTemplate({ badgeText, badgeBg, badgeColor, headline, bodyConte
 </html>`;
 }
 
-function renderMeetingCard(meeting) {
+export function renderMeetingCard(meeting) {
   const dateFormatted = formatEmailDate(meeting.date);
   const timeFormatted = `${formatEmailTime12(meeting.startTime)} – ${formatEmailTime12(meeting.endTime)}`;
   const duration = meeting.durationMins ? `${meeting.durationMins} minutes` : '60 minutes';

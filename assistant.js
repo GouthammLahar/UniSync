@@ -32,6 +32,7 @@ export function initAssistant({ getActiveGroupId }) {
   fabEl?.addEventListener('click', () => openAssistantDrawer());
   closeBtn?.addEventListener('click', () => closeAssistantDrawer());
   overlayEl?.addEventListener('click', () => closeAssistantDrawer());
+  document.getElementById('assistant-drag-bar')?.addEventListener('click', () => closeAssistantDrawer());
 
   // Navigation button
   document.getElementById('nav-assistant-btn')?.addEventListener('click', () => openAssistantDrawer());
@@ -95,7 +96,7 @@ export function openAssistantDrawer() {
   drawerEl.classList.remove('hidden');
   overlayEl?.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-  if (inputEl) {
+  if (inputEl && window.innerWidth > 600) {
     setTimeout(() => inputEl.focus(), 150);
   }
   refreshQuota();

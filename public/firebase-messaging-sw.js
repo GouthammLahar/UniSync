@@ -11,7 +11,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
 // Cache version identifier — update when static assets or core shell changes
-const CACHE_NAME = 'unisync-core-v1.2.0';
+const CACHE_NAME = 'unisync-core-v1.3.0';
 
 // Essential offline app shell assets
 const PRECACHE_ASSETS = [

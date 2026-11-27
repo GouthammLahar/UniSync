@@ -5,6 +5,7 @@
  */
 
 import { verifyToken, getAdminFirestore, sendFCMToTokens, getTokensForUsers } from '../_utils/admin.js';
+import { sendMeetingInviteEmails } from '../_utils/email.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -13,6 +14,7 @@ export default async function handler(req, res) {
     const decoded = await verifyToken(req);
     const uid = decoded.uid;
     const { meetingData } = req.body;
+    let meetingId = req.body.meetingId;
 
     if (!meetingData || !meetingData.title || !meetingData.participants?.length) {
       return res.status(400).json({ error: 'Missing required meeting fields' });
@@ -27,30 +29,61 @@ export default async function handler(req, res) {
     const responses = {};
     participants.forEach(pid => { responses[pid] = pid === uid ? 'accepted' : 'pending'; });
 
-    const meetingRef = await db.collection('meetings').add({
-      ...meetingData,
-      participants,
-      responses,
-      organizerUid: uid,
-      status: 'pending',
-      reminderSent: false,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp()
-    });
+    let finalMeetingData = meetingData;
 
-    // Create in-app notifications for participants (except organizer)
+    if (meetingId) {
+      const meetingRef = db.doc(`meetings/${meetingId}`);
+      const snap = await meetingRef.get();
+      if (!snap.exists) {
+        await meetingRef.set({
+          ...meetingData,
+          participants,
+          responses,
+          organizerUid: uid,
+          status: 'pending',
+          reminderSent: false,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp()
+        });
+      } else {
+        finalMeetingData = { ...snap.data(), ...meetingData };
+      }
+    } else {
+      const meetingRef = await db.collection('meetings').add({
+        ...meetingData,
+        participants,
+        responses,
+        organizerUid: uid,
+        status: 'pending',
+        reminderSent: false,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+      meetingId = meetingRef.id;
+    }
+
+    // Create in-app notifications for participants (except organizer) with duplicate check
     const others = participants.filter(p => p !== uid);
     for (const pid of others) {
-      await db.collection('notifications').add({
-        recipientId: pid,
-        senderId: uid,
-        type: 'meeting_invite',
-        title: `Meeting invite: "${meetingData.title}"`,
-        message: `${meetingData.organizerName || 'Someone'} invited you to a meeting on ${meetingData.date} at ${meetingData.startTime}.`,
-        meetingId: meetingRef.id,
-        read: false,
-        createdAt: FieldValue.serverTimestamp()
-      });
+      const existingSnap = await db.collection('notifications')
+        .where('recipientId', '==', pid)
+        .where('meetingId', '==', meetingId)
+        .where('type', '==', 'meeting_invite')
+        .limit(1)
+        .get();
+
+      if (existingSnap.empty) {
+        await db.collection('notifications').add({
+          recipientId: pid,
+          senderId: uid,
+          type: 'meeting_invite',
+          title: `Meeting invite: "${meetingData.title}"`,
+          message: `${meetingData.organizerName || 'Someone'} invited you to a meeting on ${meetingData.date} at ${meetingData.startTime}.`,
+          meetingId,
+          read: false,
+          createdAt: FieldValue.serverTimestamp()
+        });
+      }
     }
 
     // Send FCM push notifications to others
@@ -58,11 +91,18 @@ export default async function handler(req, res) {
     if (tokens.length > 0) {
       await sendFCMToTokens(tokens,
         { title: `📅 Meeting Invite: ${meetingData.title}`, body: `Scheduled for ${meetingData.date} at ${meetingData.startTime}` },
-        { type: 'meeting_invite', meetingId: meetingRef.id }
+        { type: 'meeting_invite', meetingId }
       );
     }
 
-    return res.status(200).json({ success: true, meetingId: meetingRef.id });
+    // Send email invitations via Resend (non-blocking)
+    try {
+      await sendMeetingInviteEmails(finalMeetingData, meetingId);
+    } catch (emailErr) {
+      console.error('[api/meetings/create] Email dispatch error:', emailErr);
+    }
+
+    return res.status(200).json({ success: true, meetingId });
   } catch (err) {
     console.error('create meeting error:', err);
     return res.status(err.message.includes('token') ? 401 : 500).json({ error: err.message });

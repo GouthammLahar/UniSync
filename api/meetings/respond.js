@@ -5,6 +5,7 @@
  */
 
 import { verifyToken, getAdminFirestore, sendFCMToTokens, getTokensForUsers } from '../_utils/admin.js';
+import { sendMeetingResponseEmail, sendMeetingConfirmedEmails } from '../_utils/email.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -30,6 +31,7 @@ export default async function handler(req, res) {
     const updatedResponses = { ...meeting.responses, [uid]: response };
     const allAccepted = meeting.participants.every(p => updatedResponses[p] === 'accepted');
     const newStatus = allAccepted ? 'confirmed' : meeting.status;
+    const statusTransitionToConfirmed = allAccepted && meeting.status !== 'confirmed';
 
     await meetingRef.update({
       [`responses.${uid}`]: response,
@@ -37,43 +39,78 @@ export default async function handler(req, res) {
       updatedAt: FieldValue.serverTimestamp()
     });
 
-    // Notify organizer
+    // Notify organizer with duplicate check
     const participantNames = meeting.participantNames || {};
     const myName = participantNames[uid] || decoded.name || 'A participant';
     const notifType = response === 'accepted' ? 'meeting_accepted' : 'meeting_rejected';
-    await db.collection('notifications').add({
-      recipientId: meeting.organizerUid,
-      senderId: uid,
-      type: notifType,
-      title: `${myName} ${response === 'accepted' ? 'accepted' : 'declined'} "${meeting.title}"`,
-      message: `Response for meeting on ${meeting.date}`,
-      meetingId,
-      read: false,
-      createdAt: FieldValue.serverTimestamp()
-    });
+    
+    const existingOrgNotif = await db.collection('notifications')
+      .where('recipientId', '==', meeting.organizerUid)
+      .where('meetingId', '==', meetingId)
+      .where('senderId', '==', uid)
+      .where('type', '==', notifType)
+      .limit(1)
+      .get();
 
-    // If all accepted, notify all participants
-    if (allAccepted) {
+    if (existingOrgNotif.empty) {
+      await db.collection('notifications').add({
+        recipientId: meeting.organizerUid,
+        senderId: uid,
+        type: notifType,
+        title: `${myName} ${response === 'accepted' ? 'accepted' : 'declined'} "${meeting.title}"`,
+        message: `Response for meeting on ${meeting.date}`,
+        meetingId,
+        read: false,
+        createdAt: FieldValue.serverTimestamp()
+      });
+    }
+
+    // Send email notification to organizer (non-blocking)
+    try {
+      await sendMeetingResponseEmail(meeting, meetingId, uid, response);
+    } catch (emailErr) {
+      console.error('[api/meetings/respond] Organizer email dispatch error:', emailErr);
+    }
+
+    // If all accepted and transitioned to confirmed, notify all participants
+    if (statusTransitionToConfirmed) {
       for (const pid of meeting.participants) {
         if (pid !== uid) {
-          await db.collection('notifications').add({
-            recipientId: pid,
-            senderId: uid,
-            type: 'meeting_confirmed',
-            title: `"${meeting.title}" is confirmed!`,
-            message: `All participants accepted. Meeting on ${meeting.date} at ${meeting.startTime}.`,
-            meetingId,
-            read: false,
-            createdAt: FieldValue.serverTimestamp()
-          });
+          const existingConfNotif = await db.collection('notifications')
+            .where('recipientId', '==', pid)
+            .where('meetingId', '==', meetingId)
+            .where('type', '==', 'meeting_confirmed')
+            .limit(1)
+            .get();
+
+          if (existingConfNotif.empty) {
+            await db.collection('notifications').add({
+              recipientId: pid,
+              senderId: uid,
+              type: 'meeting_confirmed',
+              title: `"${meeting.title}" is confirmed!`,
+              message: `All participants accepted. Meeting on ${meeting.date} at ${meeting.startTime}.`,
+              meetingId,
+              read: false,
+              createdAt: FieldValue.serverTimestamp()
+            });
+          }
         }
       }
+
       const tokens = await getTokensForUsers(meeting.participants.filter(p => p !== uid));
       if (tokens.length > 0) {
         await sendFCMToTokens(tokens,
           { title: `🎉 Meeting Confirmed: ${meeting.title}`, body: `See you on ${meeting.date} at ${meeting.startTime}!` },
           { type: 'meeting_confirmed', meetingId }
         );
+      }
+
+      // Send confirmed email to all participants (non-blocking)
+      try {
+        await sendMeetingConfirmedEmails(meeting, meetingId);
+      } catch (emailErr) {
+        console.error('[api/meetings/respond] Confirmed email dispatch error:', emailErr);
       }
     }
 

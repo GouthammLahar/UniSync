@@ -5,6 +5,7 @@
  */
 
 import { getAdminFirestore, sendFCMToTokens, getTokensForUsers } from '../_utils/admin.js';
+import { sendMeetingReminderEmails } from '../_utils/email.js';
 
 // Secret to verify this is a Vercel Cron call (optional but recommended)
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -83,6 +84,13 @@ export default async function handler(req, res) {
           },
           { type: 'meeting_reminder', meetingId }
         );
+      }
+
+      // Send email reminders via Resend (non-blocking)
+      try {
+        await sendMeetingReminderEmails(meeting, meetingId, nearestWindow);
+      } catch (emailErr) {
+        console.error('[api/reminders/cron] Email reminder error:', emailErr);
       }
 
       // Mark reminder as sent to prevent duplicates

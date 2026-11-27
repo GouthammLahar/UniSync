@@ -226,6 +226,30 @@ function _buildMeetingCard(m, type, currentUid) {
   </div>`;
 }
 
+/* ── Meeting API Helper ── */
+
+async function _callMeetingApi(endpoint, body) {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    const token = await user.getIdToken();
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.warn(`[Meeting API] ${endpoint} returned ${res.status}:`, data);
+    }
+  } catch (err) {
+    console.warn(`[Meeting API] Failed to call ${endpoint}:`, err.message);
+  }
+}
+
 /* ── Meeting Response Handler ── */
 
 async function _handleRespond(meetingId, response) {
@@ -251,6 +275,9 @@ async function _handleRespond(meetingId, response) {
         );
       }
     }
+
+    // Trigger server-side notifications (FCM push + Resend email notifications)
+    _callMeetingApi('/api/meetings/respond', { meetingId, response });
   } catch (err) {
     console.error('respondToMeeting failed:', err);
     _showToast?.('Failed to respond: ' + err.message, 'error');
@@ -271,6 +298,10 @@ async function _handleCancel(meetingId) {
         `The meeting scheduled on ${meeting.date} was cancelled by the organizer.`
       );
     }
+
+    // Trigger server-side notifications (FCM push + Resend email notifications)
+    _callMeetingApi('/api/meetings/cancel', { meetingId });
+
     _showToast?.('Meeting cancelled.', 'info');
   } catch (err) {
     _showToast?.('Failed to cancel: ' + err.message, 'error');
@@ -546,6 +577,9 @@ async function _handleCreateMeeting() {
         meetingId
       );
     }
+
+    // Trigger server-side notifications (FCM push + Resend email notifications)
+    _callMeetingApi('/api/meetings/create', { meetingId, meetingData });
 
     _closeMeetingModal();
     _showToast?.(`✅ Meeting "${title}" created! Invites sent.`, 'success');

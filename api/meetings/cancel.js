@@ -5,6 +5,7 @@
  */
 
 import { verifyToken, getAdminFirestore, sendFCMToTokens, getTokensForUsers } from '../_utils/admin.js';
+import { sendMeetingCancelledEmails } from '../_utils/email.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -30,19 +31,28 @@ export default async function handler(req, res) {
       updatedAt: FieldValue.serverTimestamp()
     });
 
-    // Notify all other participants
+    // Notify all other participants with duplicate check
     const others = (meeting.participants || []).filter(p => p !== uid);
     for (const pid of others) {
-      await db.collection('notifications').add({
-        recipientId: pid,
-        senderId: uid,
-        type: 'meeting_cancelled',
-        title: `"${meeting.title}" has been cancelled`,
-        message: `The meeting scheduled on ${meeting.date} was cancelled by the organizer.`,
-        meetingId,
-        read: false,
-        createdAt: FieldValue.serverTimestamp()
-      });
+      const existingCancelNotif = await db.collection('notifications')
+        .where('recipientId', '==', pid)
+        .where('meetingId', '==', meetingId)
+        .where('type', '==', 'meeting_cancelled')
+        .limit(1)
+        .get();
+
+      if (existingCancelNotif.empty) {
+        await db.collection('notifications').add({
+          recipientId: pid,
+          senderId: uid,
+          type: 'meeting_cancelled',
+          title: `"${meeting.title}" has been cancelled`,
+          message: `The meeting scheduled on ${meeting.date} was cancelled by the organizer.`,
+          meetingId,
+          read: false,
+          createdAt: FieldValue.serverTimestamp()
+        });
+      }
     }
 
     const tokens = await getTokensForUsers(others);
@@ -51,6 +61,13 @@ export default async function handler(req, res) {
         { title: `❌ Meeting Cancelled: ${meeting.title}`, body: `The meeting on ${meeting.date} has been cancelled.` },
         { type: 'meeting_cancelled', meetingId }
       );
+    }
+
+    // Send email cancellation to all participants (non-blocking)
+    try {
+      await sendMeetingCancelledEmails(meeting, meetingId);
+    } catch (emailErr) {
+      console.error('[api/meetings/cancel] Cancelled email dispatch error:', emailErr);
     }
 
     return res.status(200).json({ success: true });

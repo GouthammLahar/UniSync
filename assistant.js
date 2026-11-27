@@ -13,8 +13,21 @@ let _isSending = false;
 // DOM Elements
 let drawerEl, overlayEl, fabEl, closeBtn, newChatBtn, messagesEl, formEl, inputEl, sendBtn, quotaEl, chipsContainerEl;
 
+export function updateNavHeight() {
+  const header = document.getElementById('site-header');
+  if (header) {
+    const rect = header.getBoundingClientRect();
+    const h = rect.height || header.offsetHeight || (window.innerWidth <= 860 ? 60 : 68);
+    document.documentElement.style.setProperty('--nav-actual-height', `${Math.round(h)}px`);
+  }
+}
+
 export function initAssistant({ getActiveGroupId }) {
   _activeGroupIdGetter = getActiveGroupId;
+
+  updateNavHeight();
+  window.addEventListener('resize', updateNavHeight);
+  window.addEventListener('orientationchange', updateNavHeight);
 
   drawerEl = document.getElementById('assistant-drawer');
   overlayEl = document.getElementById('assistant-overlay');
@@ -32,7 +45,6 @@ export function initAssistant({ getActiveGroupId }) {
   fabEl?.addEventListener('click', () => openAssistantDrawer());
   closeBtn?.addEventListener('click', () => closeAssistantDrawer());
   overlayEl?.addEventListener('click', () => closeAssistantDrawer());
-  document.getElementById('assistant-drag-bar')?.addEventListener('click', () => closeAssistantDrawer());
 
   // Navigation button
   document.getElementById('nav-assistant-btn')?.addEventListener('click', () => openAssistantDrawer());
@@ -93,6 +105,7 @@ export function initAssistant({ getActiveGroupId }) {
 
 export function openAssistantDrawer() {
   if (!drawerEl) return;
+  updateNavHeight();
   drawerEl.classList.remove('hidden');
   overlayEl?.classList.remove('hidden');
   document.body.style.overflow = 'hidden';

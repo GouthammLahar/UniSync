@@ -20,6 +20,10 @@
    1. DESIGN TOKENS
    ============================================ */
 :root {
+  /* Dynamic Navigation Layout Tokens */
+  --nav-height:         68px;
+  --nav-actual-height:  68px;
+
   /* Official UniSync Brand Palette (from UniSync_Brand_Assets) */
   --midnight:           #031E5B; /* Deep Navy */
   --midnight-deep:      #021542;
@@ -2526,6 +2530,11 @@ input::placeholder {
 }
 
 @media (max-width: 860px) {
+  :root {
+    --nav-height: 60px;
+    --nav-actual-height: 60px;
+  }
+
   /* Hide desktop segmented navigation rail on mobile & tablets */
   .app-segmented-nav { display: none !important; }
 
@@ -3427,66 +3436,55 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   font-size: 1.05rem;
 }
 
-/* Overlay & Drawer */
+/* Overlay & Drawer — Positioned cleanly below persistent header */
 .assistant-overlay {
   position: fixed;
-  inset: 0;
+  top: var(--nav-actual-height, var(--nav-height, 68px));
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(3, 30, 91, 0.4);
   backdrop-filter: blur(2px);
-  z-index: 1100;
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 1240;
   transition: opacity 0.25s ease;
 }
 .assistant-drawer {
   position: fixed;
-  top: 0;
+  top: var(--nav-actual-height, var(--nav-height, 68px));
   right: 0;
   bottom: 0;
   width: 440px;
   max-width: 100vw;
+  height: calc(100vh - var(--nav-actual-height, var(--nav-height, 68px)));
+  max-height: calc(100vh - var(--nav-actual-height, var(--nav-height, 68px)));
   background: var(--surface-warm);
   border-left: 1px solid var(--border);
   box-shadow: -6px 0 28px rgba(3, 30, 91, 0.14);
-  z-index: 1101;
+  z-index: 1250;
   display: flex;
   flex-direction: column;
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 }
 .assistant-drawer.hidden, .assistant-overlay.hidden {
   display: none;
 }
 
-/* Mobile Tap/Drag Handle */
-.assistant-drag-bar {
-  display: none;
-  justify-content: center;
-  align-items: center;
-  padding: 8px 0 2px;
-  cursor: pointer;
-  background: var(--surface);
-  flex-shrink: 0;
-  -webkit-tap-highlight-color: transparent;
-}
-.assistant-drag-handle {
-  width: 38px;
-  height: 4px;
-  border-radius: var(--r-pill);
-  background: var(--border-strong);
-  transition: background 0.15s ease;
-}
-.assistant-drag-bar:hover .assistant-drag-handle {
-  background: var(--ink-muted);
-}
+
 
 /* Drawer Header */
 .assistant-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
+  padding: 12px 18px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  gap: 12px;
+  gap: 10px;
   flex-shrink: 0;
+  position: relative;
+  z-index: 5;
 }
 .assistant-header-title {
   display: flex;
@@ -3494,6 +3492,12 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   gap: 10px;
   min-width: 0;
   flex: 1;
+  overflow: hidden;
+}
+.assistant-title-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 .assistant-header-icon {
   width: 36px;
@@ -3531,6 +3535,8 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  position: relative;
+  z-index: 10;
 }
 .assistant-action-btn {
   background: var(--canvas-subtle);
@@ -3553,8 +3559,8 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   border-color: var(--royal);
 }
 .assistant-close-btn {
-  background: rgba(3, 30, 91, 0.06);
-  border: 1px solid rgba(3, 30, 91, 0.14);
+  background: rgba(3, 30, 91, 0.08);
+  border: 1.5px solid rgba(3, 30, 91, 0.16);
   width: 38px;
   height: 38px;
   min-width: 38px;
@@ -3565,10 +3571,13 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   color: var(--midnight);
   cursor: pointer;
   border-radius: 50%;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.18s ease;
   padding: 0;
   flex-shrink: 0;
+  position: relative;
+  z-index: 10;
   outline: none;
+  pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
@@ -3859,22 +3868,32 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   color: var(--ink-muted);
 }
 
-/* Mobile responsive drawer */
+/* Mobile responsive drawer — Positioned directly beneath persistent navigation header */
 @media (max-width: 600px) {
-  .assistant-drag-bar {
-    display: flex;
-    padding-top: max(8px, env(safe-area-inset-top, 8px));
+  .assistant-overlay {
+    top: var(--nav-actual-height, var(--nav-height, 60px));
   }
   .assistant-drawer {
+    top: var(--nav-actual-height, var(--nav-height, 60px));
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: 100vw;
     max-width: 100vw;
-    inset: 0;
-    height: 100dvh;
+    height: calc(100dvh - var(--nav-actual-height, var(--nav-height, 60px)));
+    max-height: calc(100dvh - var(--nav-actual-height, var(--nav-height, 60px)));
     border-left: none;
+    border-top: 1px solid var(--border);
     border-radius: 0;
+    z-index: 1250;
   }
   .assistant-header {
-    padding: 10px 16px 14px;
+    padding: 12px 16px;
+    background: var(--surface);
+    gap: 8px;
+  }
+  .assistant-header-title h3 {
+    font-size: 0.96rem;
   }
   .assistant-close-btn {
     width: 44px;
@@ -3883,30 +3902,32 @@ textarea.form-input { resize: vertical; min-height: 60px; }
     min-height: 44px;
     border-radius: 50%;
     background: rgba(3, 30, 91, 0.08);
-    border: 1px solid rgba(3, 30, 91, 0.16);
+    border: 1.5px solid rgba(3, 30, 91, 0.2);
     color: var(--midnight);
     box-shadow: 0 1px 3px rgba(3, 30, 91, 0.08);
   }
   .assistant-close-btn svg {
     width: 22px;
     height: 22px;
+    stroke-width: 2.6;
   }
   .assistant-action-btn {
-    height: 44px;
+    height: 40px;
     padding: 0 12px;
+    font-size: 0.76rem;
   }
   @media (max-width: 420px) {
     .assistant-action-btn .action-btn-text {
-      display: none; /* Keep close button fully prominent and uncrowded on small phones */
+      display: none;
     }
     .assistant-action-btn {
-      width: 44px;
+      width: 40px;
       padding: 0;
       justify-content: center;
     }
   }
   .assistant-input-box textarea {
-    font-size: 16px !important; /* Prevents iOS Safari from auto-zooming into inputs */
+    font-size: 16px !important; /* Prevents mobile browser auto-zoom */
   }
   .assistant-input-wrap {
     padding: 10px 14px;

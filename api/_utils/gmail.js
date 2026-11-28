@@ -312,6 +312,53 @@ export async function sendEmailViaGmail({ senderUid, to, subject, html, idempote
 =================================================================== */
 
 /**
+ *Hashes a raw action token with SHA-256 for safe Firestore storage.
+ */
+export function hashActionToken(rawToken) {
+  return crypto.createHash('sha256').update(String(rawToken)).digest('hex');
+}
+
+/**
+ * Creates a pair of single-use, recipient-specific action tokens (accepted / rejected)
+ * for a meeting invitation. Only SHA-256 hashes are stored in Firestore.
+ */
+async function createMeetingActionTokens(meetingId, uid, db) {
+  const FieldValue = (await import('firebase-admin/firestore')).FieldValue;
+  const acceptRaw = crypto.randomBytes(32).toString('base64url');
+  const declineRaw = crypto.randomBytes(32).toString('base64url');
+
+  const acceptHash = hashActionToken(acceptRaw);
+  const declineHash = hashActionToken(declineRaw);
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+  const batch = db.batch();
+  const col = db.collection('meetingActionTokens');
+
+  batch.set(col.doc(acceptHash), {
+    meetingId,
+    uid,
+    action: 'accepted',
+    used: false,
+    siblingHash: declineHash,
+    expiresAt,
+    createdAt: FieldValue.serverTimestamp()
+  });
+
+  batch.set(col.doc(declineHash), {
+    meetingId,
+    uid,
+    action: 'rejected',
+    used: false,
+    siblingHash: acceptHash,
+    expiresAt,
+    createdAt: FieldValue.serverTimestamp()
+  });
+
+  await batch.commit();
+  return { acceptRaw, declineRaw };
+}
+
+/**
  * 1. Meeting Created: Sent from Organiser's Gmail to Invited Participants
  */
 export async function sendGmailMeetingInvites(meeting, meetingId) {
@@ -320,23 +367,35 @@ export async function sendGmailMeetingInvites(meeting, meetingId) {
   if (participants.length === 0) return;
 
   const users = await getUserEmails(participants);
+  const db = getAdminFirestore();
   const ctaUrl = `${APP_URL}/?meetingId=${meetingId}#meetings`;
 
   for (const uid of participants) {
     const user = users[uid];
     if (!user?.email) continue;
 
+    const { acceptRaw, declineRaw } = await createMeetingActionTokens(meetingId, uid, db);
+    const acceptUrl = `${APP_URL}/api/meetings/respond?token=${encodeURIComponent(acceptRaw)}`;
+    const declineUrl = `${APP_URL}/api/meetings/respond?token=${encodeURIComponent(declineRaw)}`;
+
     const idempotencyKey = `invite_${meetingId}_${uid}`;
     const meetingCard = renderMeetingCard(meeting);
+
+    const actionButtonsHtml = `
+      <div style="margin:20px 0 8px 0;text-align:center;">
+        <a href="${acceptUrl}" style="display:inline-block;background-color:#15803D;color:#FFFFFF;font-size:14px;font-weight:700;text-decoration:none;padding:12px 24px;border-radius:10px;margin:0 6px 8px 6px;">Accept Meeting</a>
+        <a href="${declineUrl}" style="display:inline-block;background-color:#DC2626;color:#FFFFFF;font-size:14px;font-weight:700;text-decoration:none;padding:12px 24px;border-radius:10px;margin:0 6px 8px 6px;">Decline Meeting</a>
+      </div>
+    `;
 
     const html = baseEmailTemplate({
       badgeText: 'Meeting Invitation',
       badgeBg: '#DDEDFE',
       badgeColor: '#0356E3',
       headline: `${meeting.organizerName || 'A squad member'} invited you to a meeting`,
-      bodyContent: `You have been invited to join <strong>"${meeting.title}"</strong> on <strong>${formatEmailDate(meeting.date)}</strong> at <strong>${formatEmailTime12(meeting.startTime)}</strong>. Please review and respond in UniSync.`,
+      bodyContent: `You have been invited to join <strong>"${meeting.title}"</strong> on <strong>${formatEmailDate(meeting.date)}</strong> at <strong>${formatEmailTime12(meeting.startTime)}</strong>. Respond directly below or review in UniSync.${actionButtonsHtml}`,
       meetingCardHtml: meetingCard,
-      ctaText: 'Accept or Decline Meeting',
+      ctaText: 'View Meeting in UniSync',
       ctaUrl
     });
 

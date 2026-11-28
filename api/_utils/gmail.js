@@ -533,6 +533,63 @@ export async function sendGmailMeetingCancelled(meeting, meetingId) {
 }
 
 /**
+ * 6. Meeting Updated / Rescheduled: Sent from Organiser's Gmail to Other Participants
+ */
+export async function sendGmailMeetingUpdated(meeting, meetingId, { version = 1, scheduleChanged = false } = {}) {
+  if (!meeting || meeting.status === 'cancelled') return;
+
+  const organizerUid = meeting.organizerUid;
+  const participants = (meeting.participants || []).filter(uid => uid !== organizerUid);
+  if (participants.length === 0) return;
+
+  const users = await getUserEmails(participants);
+  const db = getAdminFirestore();
+  const ctaUrl = `${APP_URL}/?meetingId=${meetingId}#meetings`;
+
+  for (const uid of participants) {
+    const user = users[uid];
+    if (!user?.email) continue;
+
+    let actionButtonsHtml = '';
+    if (scheduleChanged) {
+      const { acceptRaw, declineRaw } = await createMeetingActionTokens(meetingId, uid, db);
+      const acceptUrl = `${APP_URL}/api/meetings/respond?token=${encodeURIComponent(acceptRaw)}`;
+      const declineUrl = `${APP_URL}/api/meetings/respond?token=${encodeURIComponent(declineRaw)}`;
+      actionButtonsHtml = `
+        <div style="margin:20px 0 8px 0;text-align:center;">
+          <a href="${acceptUrl}" style="display:inline-block;background-color:#15803D;color:#FFFFFF;font-size:14px;font-weight:700;text-decoration:none;padding:12px 24px;border-radius:10px;margin:0 6px 8px 6px;">Accept New Time</a>
+          <a href="${declineUrl}" style="display:inline-block;background-color:#DC2626;color:#FFFFFF;font-size:14px;font-weight:700;text-decoration:none;padding:12px 24px;border-radius:10px;margin:0 6px 8px 6px;">Decline</a>
+        </div>
+      `;
+    }
+
+    const idempotencyKey = `update_${meetingId}_v${version}_${uid}`;
+    const meetingCard = renderMeetingCard(meeting);
+    const badgeText = scheduleChanged ? 'Meeting Rescheduled' : 'Meeting Updated';
+
+    const html = baseEmailTemplate({
+      badgeText,
+      badgeBg: '#FEF3C7',
+      badgeColor: '#B45309',
+      headline: `${badgeText}: "${meeting.title}"`,
+      bodyContent: `${meeting.organizerName || 'The organizer'} updated the details for <strong>"${meeting.title}"</strong>. ${scheduleChanged ? 'Because the date or time changed, please confirm your availability again.' : 'Please review the updated meeting details below.'}${actionButtonsHtml}`,
+      meetingCardHtml: meetingCard,
+      ctaText: 'View Meeting in UniSync',
+      ctaUrl
+    });
+
+    await sendEmailViaGmail({
+      senderUid: organizerUid,
+      to: user.email,
+      subject: `🔄 ${badgeText}: "${meeting.title}" on ${formatEmailDate(meeting.date)}`,
+      html,
+      idempotencyKey,
+      metadata: { meetingId, eventType: 'update', version, uid }
+    });
+  }
+}
+
+/**
  * 5. Meeting Reminder: Sent from Organiser's Gmail to Participants
  */
 export async function sendGmailMeetingReminder(meeting, meetingId, windowMins) {

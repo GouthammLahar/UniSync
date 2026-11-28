@@ -1221,6 +1221,32 @@
       </div>
     </div>
 
+    <!-- Gmail Privacy Notice Modal (shown before OAuth authorization) -->
+    <div id="gmail-privacy-modal" class="modal-overlay hidden" style="position:fixed; inset:0; background:rgba(3,30,91,0.45); backdrop-filter:blur(4px); z-index:1200; display:flex; align-items:center; justify-content:center; padding:16px;">
+      <div class="modal-card" style="background:var(--surface, #FFFFFF); border:1px solid var(--border, #E2E8F0); border-radius:16px; max-width:460px; width:100%; padding:24px; box-shadow:0 20px 40px rgba(3,30,91,0.16);">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:10px; background:#DDEDFE; color:#0356E3;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><rect x="9" y="11" width="6" height="5" rx="1"></rect><path d="M10 11V9a2 2 0 1 1 4 0v2"></path></svg>
+            </span>
+            <h3 style="margin:0; font-size:1.1rem; font-weight:700; color:var(--ink-primary, #031E5B);">Your Gmail. Your Privacy.</h3>
+          </div>
+          <button type="button" id="gmail-privacy-close-btn" aria-label="Close" style="background:none; border:none; font-size:1.25rem; color:var(--ink-secondary, #64748B); cursor:pointer; padding:4px;">&times;</button>
+        </div>
+        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:16px; margin-bottom:18px; font-size:0.88rem; line-height:1.55; color:#334155;">
+          <p style="margin:0 0 10px 0;">Connecting Gmail to UniSync is only for sending meeting-related email notifications, including meeting invitations, updates, cancellations, and responses.</p>
+          <p style="margin:0 0 10px 0;">Your personal emails are not accessed or read. UniSync does not access your inbox or email attachments. Gmail authorization is used exclusively for UniSync meeting notifications.</p>
+          <p style="margin:0; font-weight:600; color:#031E5B;">You can disconnect your Gmail account at any time.</p>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="btn-secondary" id="gmail-privacy-cancel-btn">Cancel</button>
+          <button type="button" class="btn-primary" id="gmail-privacy-proceed-btn">Connect Gmail</button>
+        </div>
+      </div>
+    </div>
+
+
+
 
     <!-- ====================================================
          VIEW: MEETINGS — Smart Meeting Scheduler
@@ -1349,11 +1375,38 @@
             <p class="meeting-gmail-indicator" id="meeting-gmail-indicator" style="font-size:0.8rem; color:var(--ink-secondary); margin:0; display:flex; align-items:center; gap:6px;">
               <span>ℹ️ In-app & push notifications will be sent to participants.</span>
             </p>
+            <p style="font-size:0.74rem; color:var(--ink-muted, #64748B); margin:6px 0 0 0; line-height:1.4;">
+              🔒 Gmail is used exclusively for sending UniSync meeting notifications. Personal emails and inbox are never read. You can disconnect anytime.
+            </p>
           </div>
           <div class="meeting-modal-footer form-row">
             <button class="btn-secondary" id="meeting-back-btn">← Back</button>
             <button class="btn-primary" id="meeting-confirm-btn" disabled>✅ Send Invitations</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gmail Privacy Notice Modal (shown before OAuth authorization) -->
+    <div id="gmail-privacy-modal" class="modal-overlay hidden" style="position:fixed; inset:0; background:rgba(3,30,91,0.45); backdrop-filter:blur(4px); z-index:1200; display:flex; align-items:center; justify-content:center; padding:16px;">
+      <div class="modal-card" style="background:var(--surface, #FFFFFF); border:1px solid var(--border, #E2E8F0); border-radius:16px; max-width:460px; width:100%; padding:24px; box-shadow:0 20px 40px rgba(3,30,91,0.16);">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:10px; background:#DDEDFE; color:#0356E3;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><rect x="9" y="11" width="6" height="5" rx="1"></rect><path d="M10 11V9a2 2 0 1 1 4 0v2"></path></svg>
+            </span>
+            <h3 style="margin:0; font-size:1.1rem; font-weight:700; color:var(--ink-primary, #031E5B);">Your Gmail. Your Privacy.</h3>
+          </div>
+          <button type="button" id="gmail-privacy-close-btn" aria-label="Close" style="background:none; border:none; font-size:1.25rem; color:var(--ink-secondary, #64748B); cursor:pointer; padding:4px;">&times;</button>
+        </div>
+        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:16px; margin-bottom:18px; font-size:0.88rem; line-height:1.55; color:#334155;">
+          <p style="margin:0 0 10px 0;">Connecting Gmail to UniSync is only for sending meeting-related email notifications, including meeting invitations, updates, cancellations, and responses.</p>
+          <p style="margin:0 0 10px 0;">Your personal emails are not accessed or read. UniSync does not access your inbox or email attachments. Gmail authorization is used exclusively for UniSync meeting notifications.</p>
+          <p style="margin:0; font-weight:600; color:#031E5B;">You can disconnect your Gmail account at any time.</p>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="btn-secondary" id="gmail-privacy-cancel-btn">Cancel</button>
+          <button type="button" class="btn-primary" id="gmail-privacy-proceed-btn">Connect Gmail</button>
         </div>
       </div>
     </div>
@@ -1369,6 +1422,32 @@
         <div class="modal-actions">
           <button id="cancel-update-btn" class="btn-secondary">Cancel</button>
           <button id="confirm-update-btn" class="btn-terracotta">Yes, Clear Schedule</button>
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- Gmail Privacy Notice Modal (shown before OAuth authorization) -->
+    <div id="gmail-privacy-modal" class="modal-overlay hidden" style="position:fixed; inset:0; background:rgba(3,30,91,0.45); backdrop-filter:blur(4px); z-index:1200; display:flex; align-items:center; justify-content:center; padding:16px;">
+      <div class="modal-card" style="background:var(--surface, #FFFFFF); border:1px solid var(--border, #E2E8F0); border-radius:16px; max-width:460px; width:100%; padding:24px; box-shadow:0 20px 40px rgba(3,30,91,0.16);">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:10px; background:#DDEDFE; color:#0356E3;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><rect x="9" y="11" width="6" height="5" rx="1"></rect><path d="M10 11V9a2 2 0 1 1 4 0v2"></path></svg>
+            </span>
+            <h3 style="margin:0; font-size:1.1rem; font-weight:700; color:var(--ink-primary, #031E5B);">Your Gmail. Your Privacy.</h3>
+          </div>
+          <button type="button" id="gmail-privacy-close-btn" aria-label="Close" style="background:none; border:none; font-size:1.25rem; color:var(--ink-secondary, #64748B); cursor:pointer; padding:4px;">&times;</button>
+        </div>
+        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:16px; margin-bottom:18px; font-size:0.88rem; line-height:1.55; color:#334155;">
+          <p style="margin:0 0 10px 0;">Connecting Gmail to UniSync is only for sending meeting-related email notifications, including meeting invitations, updates, cancellations, and responses.</p>
+          <p style="margin:0 0 10px 0;">Your personal emails are not accessed or read. UniSync does not access your inbox or email attachments. Gmail authorization is used exclusively for UniSync meeting notifications.</p>
+          <p style="margin:0; font-weight:600; color:#031E5B;">You can disconnect your Gmail account at any time.</p>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="btn-secondary" id="gmail-privacy-cancel-btn">Cancel</button>
+          <button type="button" class="btn-primary" id="gmail-privacy-proceed-btn">Connect Gmail</button>
         </div>
       </div>
     </div>

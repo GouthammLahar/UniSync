@@ -114,6 +114,20 @@ function _updateModalGmailIndicator() {
   }
 }
 
+function _openGmailPrivacyModal() {
+  const modal = document.getElementById('gmail-privacy-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+  } else {
+    _handleConnectGmail();
+  }
+}
+
+function _closeGmailPrivacyModal() {
+  const modal = document.getElementById('gmail-privacy-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
 function _wireGmailConnectBtn() {
   const btn = document.getElementById('gmail-connect-btn');
   if (btn) {
@@ -141,10 +155,17 @@ function _wireGmailConnectBtn() {
           btn.disabled = false;
         }
       } else {
-        await _handleConnectGmail();
+        _openGmailPrivacyModal();
       }
     });
   }
+
+  document.getElementById('gmail-privacy-close-btn')?.addEventListener('click', _closeGmailPrivacyModal);
+  document.getElementById('gmail-privacy-cancel-btn')?.addEventListener('click', _closeGmailPrivacyModal);
+  document.getElementById('gmail-privacy-proceed-btn')?.addEventListener('click', async () => {
+    _closeGmailPrivacyModal();
+    await _handleConnectGmail();
+  });
 }
 
 async function _handleConnectGmail() {

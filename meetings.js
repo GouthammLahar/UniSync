@@ -60,10 +60,11 @@ export async function refreshGmailStatus() {
 
     // If the token was flagged as revoked (possibly due to a transient error),
     // silently attempt recovery before showing "Connect Gmail" to the user.
+    // POST /api/auth/gmail/status triggers the internal recovery path.
     if (!data.connected && data.reason === 'token_revoked') {
       console.log('[Meetings] Attempting silent Gmail token recovery…');
       try {
-        const recoveryRes = await fetch('/api/auth/gmail/recover', {
+        const recoveryRes = await fetch('/api/auth/gmail/status', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });

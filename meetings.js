@@ -56,7 +56,29 @@ export async function refreshGmailStatus() {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('Status error');
-    const data = await res.json();
+    let data = await res.json();
+
+    // If the token was flagged as revoked (possibly due to a transient error),
+    // silently attempt recovery before showing "Connect Gmail" to the user.
+    if (!data.connected && data.reason === 'token_revoked') {
+      console.log('[Meetings] Attempting silent Gmail token recovery…');
+      try {
+        const recoveryRes = await fetch('/api/auth/gmail/recover', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (recoveryRes.ok) {
+          const recovered = await recoveryRes.json();
+          if (recovered.connected) {
+            console.log('[Meetings] Gmail token recovery succeeded.');
+            data = recovered;
+          }
+        }
+      } catch (recoveryErr) {
+        console.warn('[Meetings] Gmail recovery attempt failed:', recoveryErr.message);
+      }
+    }
+
     _gmailStatus = data;
 
     if (btn && btnText) {

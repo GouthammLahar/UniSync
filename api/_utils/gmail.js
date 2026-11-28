@@ -60,18 +60,29 @@ export function verifySignedState(stateStr) {
 
 /**
  * Checks whether a given user has connected Gmail and has active credentials.
+ * Returns a `reason` field to help distinguish "never connected" from "token revoked".
  */
 export async function getGmailConnectionStatus(uid) {
-  if (!uid) return { connected: false };
+  if (!uid) return { connected: false, reason: 'no_uid' };
   try {
     const db = getAdminFirestore();
     const docSnap = await db.collection('userCredentials').doc(uid).get();
-    if (!docSnap.exists) return { connected: false };
+    if (!docSnap.exists) return { connected: false, reason: 'not_connected' };
 
     const data = docSnap.data();
     const gmail = data?.gmail;
-    if (!gmail || !gmail.refreshToken || gmail.revoked) {
-      return { connected: false };
+    if (!gmail || !gmail.refreshToken) {
+      return { connected: false, reason: 'not_connected' };
+    }
+
+    // If revoked flag is set but a refresh token still exists, attempt recovery
+    // before telling the UI the user is disconnected.
+    if (gmail.revoked) {
+      const recovered = await _tryRecoverToken(uid, gmail, db);
+      if (!recovered) {
+        return { connected: false, reason: 'token_revoked' };
+      }
+      // Fall through — recovery succeeded, treat as connected
     }
 
     return {
@@ -81,7 +92,50 @@ export async function getGmailConnectionStatus(uid) {
     };
   } catch (err) {
     console.error('[Gmail] Status lookup failed for uid:', uid, err.message);
-    return { connected: false, error: err.message };
+    return { connected: false, reason: 'lookup_error' };
+  }
+}
+
+/**
+ * Attempts to recover a "revoked" token by trying a fresh refresh grant.
+ * If successful, clears the revoked flag and returns true.
+ * This handles the case where revoked=true was set due to a transient error.
+ */
+async function _tryRecoverToken(uid, gmail, db) {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  if (!clientId || !clientSecret || !gmail.refreshToken) return false;
+
+  try {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: gmail.refreshToken,
+        grant_type: 'refresh_token'
+      })
+    });
+
+    if (!tokenRes.ok) {
+      const err = await tokenRes.json().catch(() => ({}));
+      console.warn('[Gmail] Recovery refresh failed for uid:', uid, err.error || tokenRes.status);
+      return false;
+    }
+
+    const tokenData = await tokenRes.json();
+    const now = Date.now();
+    await db.collection('userCredentials').doc(uid).update({
+      'gmail.accessToken': tokenData.access_token,
+      'gmail.expiryDate': now + ((tokenData.expires_in || 3600) * 1000),
+      'gmail.revoked': false
+    });
+    console.log('[Gmail] Token recovery succeeded for uid:', uid);
+    return true;
+  } catch (err) {
+    console.warn('[Gmail] Token recovery exception for uid:', uid, err.message);
+    return false;
   }
 }
 
@@ -128,10 +182,15 @@ export async function getValidAccessToken(uid) {
 
     const tokenData = await tokenRes.json();
     if (!tokenRes.ok) {
-      console.warn('[Gmail] Token refresh error for uid:', uid, tokenData);
-      if (tokenData.error === 'invalid_grant') {
-        // Mark token as revoked so we don't spam Google
+      const errCode = tokenData.error;
+      // Only mark revoked for definitive OAuth revocation errors.
+      // Transient server errors (server_error, temporarily_unavailable, rate limits)
+      // must NOT set revoked=true — the refresh token may still be valid.
+      const definitivelyRevoked = errCode === 'invalid_grant' || errCode === 'token_revoked';
+      console.warn('[Gmail] Token refresh failed for uid:', uid, 'error:', errCode || tokenRes.status);
+      if (definitivelyRevoked) {
         await credRef.update({ 'gmail.revoked': true });
+        console.warn('[Gmail] Marked token as definitively revoked for uid:', uid);
       }
       return null;
     }
@@ -293,13 +352,16 @@ export async function sendGmailMeetingInvites(meeting, meetingId) {
 }
 
 /**
- * 2. Meeting Response: Sent from Responder's Gmail to Organiser
+ * 2. Meeting Response: Sent from Organiser's Gmail to Organiser (self-notification)
+ * Uses the organiser's connected Gmail because only the organiser is guaranteed
+ * to have connected Gmail. The responder may not have done so.
  */
 export async function sendGmailMeetingResponse(meeting, meetingId, responderUid, response) {
   if (responderUid === meeting.organizerUid) return;
 
-  const users = await getUserEmails([meeting.organizerUid, responderUid]);
-  const organizer = users[meeting.organizerUid];
+  const organizerUid = meeting.organizerUid;
+  const users = await getUserEmails([organizerUid, responderUid]);
+  const organizer = users[organizerUid];
   const responder = users[responderUid];
   if (!organizer?.email) return;
 
@@ -320,8 +382,9 @@ export async function sendGmailMeetingResponse(meeting, meetingId, responderUid,
     ctaUrl
   });
 
+  // Send from the organiser's Gmail (they are guaranteed to have connected it)
   await sendEmailViaGmail({
-    senderUid: responderUid,
+    senderUid: organizerUid,
     to: organizer.email,
     subject: `${isAccepted ? '✅ Accepted' : '❌ Declined'}: "${meeting.title}" by ${responderName}`,
     html,
